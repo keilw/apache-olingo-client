@@ -1,0 +1,17 @@
+/*
+ * Basic Stylesheet file.
+ */
+.BasicClass {
+  -fx-background-color: whitesmoke;
+}
+
+#output {
+  -fx-font-size: 16pt;
+  -fx-background-color: beige;
+  -fx-font-family: monospace;
+}
+
+#inputArea {
+  -fx-font-size: 14pt;
+  -fx-background-color: beige;
+}
