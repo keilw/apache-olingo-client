@@ -18,6 +18,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.ListView;
@@ -139,8 +140,13 @@ public class BasicController implements Initializable {
     }
   }
 
+  /**
+   * Use of Event to allow processing of <code>MouseEvents</code> as well as <code>ActionEvents</code>.
+   *
+   * @param event
+   */
   @FXML
-  public void updateTableView(MouseEvent event) {
+  public void updateTableView(Event event) {
     try {
       if (tableView != null) {
         edmPane.getItems().remove(tableView);
