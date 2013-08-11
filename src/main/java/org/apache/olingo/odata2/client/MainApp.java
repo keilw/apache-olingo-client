@@ -18,6 +18,7 @@ public class MainApp extends Application {
 
     Scene scene = new Scene(root);
 
+    stage.setTitle("Olingo Sample Client - OData-v2");
     stage.setScene(scene);
     stage.show();
   }
