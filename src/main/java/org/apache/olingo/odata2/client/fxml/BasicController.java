@@ -66,27 +66,33 @@ public class BasicController implements Initializable {
   }
 
   @FXML
-  public void sendRequest(ActionEvent event) {
+  public void sendSingleRequest(ActionEvent event) {
+    try {
+      String serviceUrl = getValidUrl();
+      InputStream is = ODataClient.getRawHttpEntity(serviceUrl, ODataClient.APPLICATION_JSON);
+      String content = StringHelper.inputStreamToString(is);
+      rawView.setText(content);
+      webView.getEngine().loadContent(content);
 
-    String serviceUrl = inputArea.getText();
+      writeToLogArea("All requests successfull processed");
+    } catch (IllegalArgumentException | IOException | HttpException ex) {
+      writeToLogArea(ex);
+    }
+  }
 
-    if (isEmpty(serviceUrl)) {
-      rawView.setText("No url given.");
-    } else {
-      StringBuilder b = new StringBuilder();
-      b.append("--- ").append(DateFormat.getDateTimeInstance().format(new Date())).append("--------\n");
-      try {
-        InputStream is = ODataClient.getRawHttpEntity(serviceUrl, ODataClient.APPLICATION_JSON);
-        String content = StringHelper.inputStreamToString(is);
-        rawView.setText(content);
-        webView.getEngine().loadContent(content);
+  @FXML
+  public void exploreService(ActionEvent event) {
+    try {
+      String serviceUrl = getValidUrl();
+      ODataClient client = new ODataClient(serviceUrl);
+      createEdmView(client);
+      String rawContent = client.getRawContentOfLastRequest();
+      rawView.setText(rawContent);
+      webView.getEngine().loadContent(rawContent);
 
-        ODataClient client = new ODataClient(serviceUrl);
-        createEdmView(client);
-        writeToLogArea("All requests successfull processed");
-      } catch (IOException | ODataException | HttpException ex) {
-        writeToLogArea(ex);
-      }
+      writeToLogArea("All requests successfull processed");
+    } catch (IllegalArgumentException | IOException | ODataException | HttpException ex) {
+      writeToLogArea(ex);
     }
   }
 
@@ -120,6 +126,14 @@ public class BasicController implements Initializable {
       ODataFeedItemHolder holder = new ODataFeedItemHolder(feed, entityType, setName);
       entityListView.getItems().add(holder);
     }
+  }
+
+  private String getValidUrl() throws IllegalArgumentException {
+    String serviceUrl = inputArea.getText();
+    if(isEmpty(serviceUrl)) {
+      throw new IllegalArgumentException("No url given.");
+    }
+    return serviceUrl;
   }
 
   private class ODataFeedItemHolder {
