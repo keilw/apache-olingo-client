@@ -4,6 +4,7 @@
  */
 package org.apache.olingo.odata2.client;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -11,6 +12,8 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URL;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.olingo.odata2.api.commons.HttpStatusCodes;
@@ -30,9 +33,9 @@ public class ODataClient {
   public static final String METADATA = "$metadata";
   //
   private String serviceUrl;
-  private Proxy.Type protocol;
+  private Proxy.Type proxyProtocol;
   private String proxyHostname;
-  private int port;
+  private int proxyPort;
   private boolean useProxy;
   private String username;
   private String password;
@@ -41,16 +44,24 @@ public class ODataClient {
 
   private ODataClient() throws IOException, HttpException {
     this.serviceUrl = "";
-    this.protocol = Proxy.Type.HTTP;
-    this.port = 80;
     this.useProxy = false;
+    this.useAuthentication = false;
+  }
+
+  public ODataClient(String serviceUrl) throws IOException, HttpException, ODataException {
+    this.serviceUrl = serviceUrl;
+    this.proxyProtocol = Proxy.Type.HTTP;
+    this.proxyPort = 80;
+    this.useProxy = false;
+
+    edm = getEdmInternal();
   }
 
   public ODataClient(String serviceUrl, Proxy.Type protocol, String proxy, int port) throws IOException, ODataException, HttpException {
     this.serviceUrl = serviceUrl;
-    this.protocol = protocol;
+    this.proxyProtocol = protocol;
     this.proxyHostname = proxy;
-    this.port = port;
+    this.proxyPort = port;
     this.useProxy = true;
     this.useAuthentication = false;
 
@@ -59,9 +70,9 @@ public class ODataClient {
 
   public ODataClient(String serviceUrl, Proxy.Type protocol, String proxy, int port, String username, String password) throws IOException, ODataException, HttpException {
     this.serviceUrl = serviceUrl;
-    this.protocol = protocol;
+    this.proxyProtocol = protocol;
     this.proxyHostname = proxy;
-    this.port = port;
+    this.proxyPort = port;
     this.useProxy = true;
     this.username = username;
     this.password = password;
@@ -81,8 +92,10 @@ public class ODataClient {
   }
 
   private Edm getEdmInternal() throws IOException, ODataException, HttpException {
-    HttpURLConnection connection = connect(METADATA, APPLICATION_XML, "GET");
-    edm = EntityProvider.readMetadata((InputStream) connection.getContent(), false);
+    if(edm == null) {
+      HttpURLConnection connection = connect(METADATA, APPLICATION_XML, "GET");
+      edm = EntityProvider.readMetadata((InputStream) connection.getContent(), false);
+    }
     return edm;
   }
 
@@ -111,6 +124,7 @@ public class ODataClient {
     }
 
     InputStream content = (InputStream) connect(relativeUri, contentType, "GET").getContent();
+    content = storeRawContent(content);
     return EntityProvider.readFeed(contentType, entityContainer.getEntitySet(entitySetName), content, EntityProviderReadProperties.init().build());
   }
 
@@ -123,7 +137,7 @@ public class ODataClient {
     URL url = new URL(serviceUrl + relativeUri);
     HttpURLConnection connection;
     if (useProxy) {
-      Proxy proxy = new Proxy(protocol, new InetSocketAddress(proxyHostname, port));
+      Proxy proxy = new Proxy(proxyProtocol, new InetSocketAddress(proxyHostname, proxyPort));
       connection = (HttpURLConnection) url.openConnection(proxy);
     } else {
       connection = (HttpURLConnection) url.openConnection();
@@ -142,5 +156,22 @@ public class ODataClient {
     checkStatus(connection);
 
     return connection;
+  }
+
+  private String rawContentOfLastRequest;
+
+  public String getRawContentOfLastRequest() {
+    return rawContentOfLastRequest;
+  }
+
+  private InputStream storeRawContent(InputStream content) {
+    try {
+      String rawContent = StringHelper.inputStreamToString(content);
+      rawContentOfLastRequest = rawContent;
+      return new ByteArrayInputStream(rawContent.getBytes("UTF-8"));
+    } catch (IOException ex) {
+      Logger.getLogger(ODataClient.class.getName()).log(Level.SEVERE, null, ex);
+    }
+    return content;
   }
 }
