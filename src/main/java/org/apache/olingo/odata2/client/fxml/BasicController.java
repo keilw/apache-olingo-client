@@ -28,6 +28,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -58,6 +59,7 @@ public class BasicController implements Initializable {
   @FXML SplitPane edmPane;
   @FXML TextArea logArea;
   @FXML ListView entityListView;
+  @FXML ProgressIndicator progress;
   //
   private TableView tableView;
 
@@ -72,9 +74,9 @@ public class BasicController implements Initializable {
   @FXML
   public void sendSingleRequest(ActionEvent event) {
 
-    Task<String> singleRequest = new Task<String>() {
+    Task<Void> singleRequest = new Task<Void>() {
       @Override
-      protected String call() throws Exception {
+      protected Void call() throws Exception {
         try {
           String serviceUrl = getValidUrl();
           InputStream is = ODataClient.getRawHttpEntity(serviceUrl, ODataClient.APPLICATION_JSON);
@@ -84,18 +86,24 @@ public class BasicController implements Initializable {
             @Override public void run() {
               rawView.setText(content);
               webView.getEngine().loadContent(content);
+              writeToLogArea("All requests successfull processed");
+              progress.setProgress(1);
             }
           });
 
-          writeToLogArea("All requests successfull processed");
-          return content;
         } catch (IllegalArgumentException | IOException | HttpException ex) {
-          writeToLogArea(ex);
-          return ex.getMessage();
+          Platform.runLater(new Runnable() {
+            @Override public void run() {
+              progress.setProgress(0);
+              writeToLogArea(ex);
+            }
+          });
         }
+        return null;
       }
     };
 
+    clearViews();
     new Thread(singleRequest).start();
   }
 
@@ -114,18 +122,32 @@ public class BasicController implements Initializable {
               String rawContent = client.getRawContentOfLastRequest();
               webView.getEngine().loadContent(rawContent);
               rawView.setText(rawContent);
+              writeToLogArea("All requests successfull processed");
+              progress.setProgress(1);
             }
           });
 
-          writeToLogArea("All requests successfull processed");
         } catch (IllegalArgumentException | IOException | HttpException ex) {
-          writeToLogArea(ex);
+          Platform.runLater(new Runnable() {
+            @Override public void run() {
+              progress.setProgress(0);
+              writeToLogArea(ex);
+            }
+          });
         }
         return null;
       }
     };
 
+    clearViews();
     new Thread(singleRequest).start();
+  }
+
+  private void clearViews() {
+    logArea.setText("");
+    webView.getEngine().loadContent("");
+    rawView.setText("");
+    progress.setProgress(-1);
   }
 
   private void writeToLogArea(Exception ex) {
@@ -145,9 +167,10 @@ public class BasicController implements Initializable {
     logArea.setText(b.toString());
   }
 
-  private ObservableList<ODataFeedItemHolder> createEdmView(ODataClient client) throws ODataException, EdmException, IOException, HttpException {
+  private void createEdmView(ODataClient client) throws ODataException, EdmException, IOException, HttpException {
+    entityListView.getItems().clear();
     List<EdmEntitySetInfo> entitySets = client.getEntitySets();
-    ObservableList<ODataFeedItemHolder> results = FXCollections.observableArrayList();
+
     for (EdmEntitySetInfo edmEntitySetInfo : entitySets) {
       String containerName = edmEntitySetInfo.getEntityContainerName();
       String setName = edmEntitySetInfo.getEntitySetName();
@@ -157,15 +180,13 @@ public class BasicController implements Initializable {
       EdmEntityType entityType = edm.getEntityContainer(containerName).getEntitySet(setName).getEntityType();
 
       final ODataFeedItemHolder holder = new ODataFeedItemHolder(feed, entityType, setName);
-//      entityListView.getItems().add(holder);
-      results.add(holder);
+
       Platform.runLater(new Runnable() {
         @Override public void run() {
           entityListView.getItems().add(holder);
         }
       });
     }
-    return results;
   }
 
   private String getValidUrl() throws IllegalArgumentException {
