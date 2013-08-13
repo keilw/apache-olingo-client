@@ -10,9 +10,8 @@ import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.ResourceBundle;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
@@ -27,8 +26,6 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.input.DataFormat;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.web.WebView;
 import javafx.util.Callback;
 import org.apache.olingo.odata2.api.edm.Edm;
@@ -211,8 +208,12 @@ public class BasicController implements Initializable {
     public ObservableValue<String> call(TableColumn.CellDataFeatures<ODataEntry, String> p) {
       ODataEntry ode = p.getValue();
       Object object = ode.getProperties().get(this.property);
-      if (object instanceof Calendar) {
+      if(object == null) {
+        object = "NULL";
+      } else if (object instanceof Calendar) {
         object = DateFormat.getDateTimeInstance().format(((Calendar) object).getTime());
+      } else if(object instanceof Map) {
+        object = "(complex) " + object.toString();
       }
       return new SimpleStringProperty(String.valueOf(object));
     }
