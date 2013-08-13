@@ -12,12 +12,19 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
+import javafx.concurrent.Worker;
+import javafx.concurrent.WorkerStateEvent;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.ListView;
@@ -64,33 +71,96 @@ public class BasicController implements Initializable {
 
   @FXML
   public void sendSingleRequest(ActionEvent event) {
-    try {
-      String serviceUrl = getValidUrl();
-      InputStream is = ODataClient.getRawHttpEntity(serviceUrl, ODataClient.APPLICATION_JSON);
-      String content = StringHelper.inputStreamToString(is);
-      rawView.setText(content);
-      webView.getEngine().loadContent(content);
 
-      writeToLogArea("All requests successfull processed");
-    } catch (IllegalArgumentException | IOException | HttpException ex) {
-      writeToLogArea(ex);
+    Task<String> singleRequest = new Task<String>() {
+      @Override
+      protected String call() throws Exception {
+        try {
+          String serviceUrl = getValidUrl();
+          InputStream is = ODataClient.getRawHttpEntity(serviceUrl, ODataClient.APPLICATION_JSON);
+          final String content = StringHelper.inputStreamToString(is);
+
+          Platform.runLater(new Runnable() {
+            @Override public void run() {
+              rawView.setText(content);
+              webView.getEngine().loadContent(content);
+            }
+          });
+
+          writeToLogArea("All requests successfull processed");
+          return content;
+        } catch (IllegalArgumentException | IOException | HttpException ex) {
+          writeToLogArea(ex);
+          return ex.getMessage();
+        }
+      }
+    };
+
+    new Thread(singleRequest).start();
+  }
+  Task<Void> task = new Task<Void>() {
+    @Override public Void call() {
+      final int max = 1000000;
+      for (int i = 1; i <= max; i++) {
+        if (isCancelled()) {
+          break;
+        }
+        updateProgress(i, max);
+      }
+      return null;
     }
+  };
+
+  @FXML
+  public void exploreService23(ActionEvent event) {
+    Task<ObservableList<ODataFeedItemHolder>> task = new Task<ObservableList<ODataFeedItemHolder>>() {
+      @Override protected ObservableList<ODataFeedItemHolder> call() throws Exception {
+        try {
+          final String serviceUrl = getValidUrl();
+          final ODataClient client = new ODataClient(serviceUrl);
+
+          String rawContent = client.getRawContentOfLastRequest();
+          webView.getEngine().loadContent(rawContent);
+          rawView.setText(rawContent);
+          writeToLogArea("All requests successfull processed");
+          return createEdmView(client);
+
+        } catch (IllegalArgumentException | IOException | HttpException ex) {
+          writeToLogArea(ex);
+          return FXCollections.observableArrayList();
+        }
+      }
+    };
+    new Thread(task).start();
   }
 
   @FXML
   public void exploreService(ActionEvent event) {
-    try {
-      String serviceUrl = getValidUrl();
-      ODataClient client = new ODataClient(serviceUrl);
-      createEdmView(client);
-      String rawContent = client.getRawContentOfLastRequest();
-      rawView.setText(rawContent);
-      webView.getEngine().loadContent(rawContent);
+    Task<Void> singleRequest = new Task<Void>() {
+      @Override
+      protected Void call() throws Exception {
+        try {
+          final String serviceUrl = getValidUrl();
+          final ODataClient client = new ODataClient(serviceUrl);
+          createEdmView(client);
 
-      writeToLogArea("All requests successfull processed");
-    } catch (IllegalArgumentException | IOException | ODataException | HttpException ex) {
-      writeToLogArea(ex);
-    }
+          Platform.runLater(new Runnable() {
+            @Override public void run() {
+              String rawContent = client.getRawContentOfLastRequest();
+              webView.getEngine().loadContent(rawContent);
+              rawView.setText(rawContent);
+            }
+          });
+
+          writeToLogArea("All requests successfull processed");
+        } catch (IllegalArgumentException | IOException | HttpException ex) {
+          writeToLogArea(ex);
+        }
+        return null;
+      }
+    };
+
+    new Thread(singleRequest).start();
   }
 
   private void writeToLogArea(Exception ex) {
@@ -110,8 +180,9 @@ public class BasicController implements Initializable {
     logArea.setText(b.toString());
   }
 
-  private void createEdmView(ODataClient client) throws ODataException, EdmException, IOException, HttpException {
+  private ObservableList<ODataFeedItemHolder> createEdmView(ODataClient client) throws ODataException, EdmException, IOException, HttpException {
     List<EdmEntitySetInfo> entitySets = client.getEntitySets();
+    ObservableList<ODataFeedItemHolder> results = FXCollections.observableArrayList();
     for (EdmEntitySetInfo edmEntitySetInfo : entitySets) {
       String containerName = edmEntitySetInfo.getEntityContainerName();
       String setName = edmEntitySetInfo.getEntitySetName();
@@ -120,14 +191,21 @@ public class BasicController implements Initializable {
       Edm edm = client.getEdm();
       EdmEntityType entityType = edm.getEntityContainer(containerName).getEntitySet(setName).getEntityType();
 
-      ODataFeedItemHolder holder = new ODataFeedItemHolder(feed, entityType, setName);
-      entityListView.getItems().add(holder);
+      final ODataFeedItemHolder holder = new ODataFeedItemHolder(feed, entityType, setName);
+//      entityListView.getItems().add(holder);
+      results.add(holder);
+      Platform.runLater(new Runnable() {
+        @Override public void run() {
+          entityListView.getItems().add(holder);
+        }
+      });
     }
+    return results;
   }
 
   private String getValidUrl() throws IllegalArgumentException {
     String serviceUrl = inputArea.getText();
-    if(isEmpty(serviceUrl)) {
+    if (isEmpty(serviceUrl)) {
       throw new IllegalArgumentException("No url given.");
     }
     return serviceUrl;
@@ -152,7 +230,9 @@ public class BasicController implements Initializable {
   }
 
   /**
-   * Use of Event to allow processing of <code>MouseEvents</code> as well as <code>ActionEvents</code>.
+   * Use of Event to allow processing of
+   * <code>MouseEvents</code> as well as
+   * <code>ActionEvents</code>.
    *
    * @param event
    */
@@ -208,11 +288,11 @@ public class BasicController implements Initializable {
     public ObservableValue<String> call(TableColumn.CellDataFeatures<ODataEntry, String> p) {
       ODataEntry ode = p.getValue();
       Object object = ode.getProperties().get(this.property);
-      if(object == null) {
+      if (object == null) {
         object = "NULL";
       } else if (object instanceof Calendar) {
         object = DateFormat.getDateTimeInstance().format(((Calendar) object).getTime());
-      } else if(object instanceof Map) {
+      } else if (object instanceof Map) {
         object = "(complex) " + object.toString();
       }
       return new SimpleStringProperty(String.valueOf(object));
