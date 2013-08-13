@@ -68,6 +68,11 @@
           </tabs>
         </TabPane>
         <Button alignment="CENTER_RIGHT" mnemonicParsing="false" onAction="#sendSingleRequest" text="Single Request" GridPane.columnIndex="1" GridPane.margin="$x1" GridPane.rowIndex="1" />
+        <ProgressIndicator fx:id="progress" prefHeight="30.0" prefWidth="30.0" progress="0.0" GridPane.columnIndex="0" GridPane.rowIndex="1">
+          <GridPane.margin>
+            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+          </GridPane.margin>
+        </ProgressIndicator>
       </children>
       <columnConstraints>
         <ColumnConstraints halignment="CENTER" hgrow="NEVER" minWidth="50.0" prefWidth="50.0" />
