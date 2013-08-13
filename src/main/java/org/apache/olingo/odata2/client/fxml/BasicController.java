@@ -98,41 +98,6 @@ public class BasicController implements Initializable {
 
     new Thread(singleRequest).start();
   }
-  Task<Void> task = new Task<Void>() {
-    @Override public Void call() {
-      final int max = 1000000;
-      for (int i = 1; i <= max; i++) {
-        if (isCancelled()) {
-          break;
-        }
-        updateProgress(i, max);
-      }
-      return null;
-    }
-  };
-
-  @FXML
-  public void exploreService23(ActionEvent event) {
-    Task<ObservableList<ODataFeedItemHolder>> task = new Task<ObservableList<ODataFeedItemHolder>>() {
-      @Override protected ObservableList<ODataFeedItemHolder> call() throws Exception {
-        try {
-          final String serviceUrl = getValidUrl();
-          final ODataClient client = new ODataClient(serviceUrl);
-
-          String rawContent = client.getRawContentOfLastRequest();
-          webView.getEngine().loadContent(rawContent);
-          rawView.setText(rawContent);
-          writeToLogArea("All requests successfull processed");
-          return createEdmView(client);
-
-        } catch (IllegalArgumentException | IOException | HttpException ex) {
-          writeToLogArea(ex);
-          return FXCollections.observableArrayList();
-        }
-      }
-    };
-    new Thread(task).start();
-  }
 
   @FXML
   public void exploreService(ActionEvent event) {
