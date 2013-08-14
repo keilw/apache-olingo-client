@@ -12,18 +12,18 @@
 <?import javafx.scene.web.*?>
 <?scenebuilder-stylesheet application.css?>
 
-<AnchorPane id="AnchorPane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="200.0" minWidth="200.0" prefHeight="350.0" prefWidth="400.0" styleClass="BasicFxmlClass" xmlns:fx="http://javafx.com/fxml" fx:controller="org.apache.olingo.odata2.client.fxml.BasicController">
+<AnchorPane id="AnchorPane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="200.0" minWidth="200.0" prefHeight="350.0" prefWidth="400.0" styleClass="BasicFxmlClass" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="org.apache.olingo.odata2.client.fxml.BasicController">
   <children>
     <GridPane id="GridPane" alignment="CENTER" maxHeight="1.7976931348623157E308" minHeight="200.0" minWidth="200.0" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
       <children>
-        <Button id="button" mnemonicParsing="false" onAction="#exploreService" text="Explore Service" GridPane.columnIndex="2" GridPane.rowIndex="1">
+        <Button id="button" mnemonicParsing="false" onAction="#exploreService" text="Explore Service" GridPane.columnIndex="2" GridPane.rowIndex="3">
           <GridPane.margin>
             <Insets left="5.0" right="5.0" fx:id="x1" />
           </GridPane.margin>
         </Button>
         <Label alignment="CENTER" prefWidth="54.0" text="Url:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
         <TextField fx:id="inputArea" maxWidth="1.7976931348623157E308" prefWidth="200.0" GridPane.columnIndex="1" GridPane.columnSpan="2147483647" GridPane.rowIndex="0" />
-        <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="200.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE" GridPane.columnIndex="0" GridPane.columnSpan="2147483647" GridPane.hgrow="ALWAYS" GridPane.rowIndex="2" GridPane.vgrow="ALWAYS">
+        <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="200.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE" GridPane.columnIndex="0" GridPane.columnSpan="2147483647" GridPane.hgrow="ALWAYS" GridPane.rowIndex="4" GridPane.vgrow="ALWAYS">
           <tabs>
             <Tab text="EDM">
               <content>
@@ -67,21 +67,29 @@
             </Tab>
           </tabs>
         </TabPane>
-        <Button alignment="CENTER_RIGHT" mnemonicParsing="false" onAction="#sendSingleRequest" text="Single Request" GridPane.columnIndex="1" GridPane.margin="$x1" GridPane.rowIndex="1" />
-        <ProgressIndicator fx:id="progress" prefHeight="30.0" prefWidth="30.0" progress="0.0" GridPane.columnIndex="0" GridPane.rowIndex="1">
+        <Button alignment="CENTER_RIGHT" mnemonicParsing="false" onAction="#sendSingleRequest" text="Single Request" GridPane.columnIndex="1" GridPane.margin="$x1" GridPane.rowIndex="3" />
+        <ProgressIndicator fx:id="progress" prefHeight="30.0" prefWidth="30.0" progress="0.0" GridPane.columnIndex="0" GridPane.rowIndex="3">
           <GridPane.margin>
             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
           </GridPane.margin>
         </ProgressIndicator>
+        <TextField id="proxySetting" fx:id="proxyHost" disable="true" prefWidth="200.0" text="proxy" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+        <TextField fx:id="loginUser" disable="true" prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+        <PasswordField fx:id="loginPassword" disable="true" prefWidth="200.0" GridPane.columnIndex="2" GridPane.rowIndex="2" />
+        <CheckBox fx:id="proxyCheckbox" mnemonicParsing="false" onAction="#changeProxy" text="Proxy" GridPane.columnIndex="0" GridPane.rowIndex="1" />
+        <CheckBox fx:id="loginCheckbox" mnemonicParsing="false" onAction="#changeLogin" text="Login" GridPane.columnIndex="0" GridPane.rowIndex="2" />
+        <TextField fx:id="proxyPort" disable="true" prefWidth="200.0" text="8080" GridPane.columnIndex="2" GridPane.rowIndex="1" />
       </children>
       <columnConstraints>
-        <ColumnConstraints halignment="CENTER" hgrow="NEVER" minWidth="50.0" prefWidth="50.0" />
+        <ColumnConstraints halignment="CENTER" hgrow="NEVER" minWidth="80.0" prefWidth="50.0" />
         <ColumnConstraints halignment="RIGHT" hgrow="ALWAYS" maxWidth="1.7976931348623157E308" minWidth="100.0" />
         <ColumnConstraints halignment="CENTER" hgrow="NEVER" minWidth="100.0" />
       </columnConstraints>
       <rowConstraints>
         <RowConstraints maxHeight="45.0" minHeight="30.0" prefHeight="40.0" valignment="CENTER" vgrow="NEVER" />
         <RowConstraints maxHeight="45.0" minHeight="10.0" prefHeight="45.0" valignment="CENTER" vgrow="NEVER" />
+        <RowConstraints maxHeight="45.0" minHeight="10.0" prefHeight="45.0" valignment="CENTER" vgrow="NEVER" />
+        <RowConstraints maxHeight="60.0" minHeight="40.0" prefHeight="50.0" valignment="CENTER" vgrow="NEVER" />
         <RowConstraints maxHeight="1.7976931348623157E308" minHeight="100.0" valignment="CENTER" vgrow="ALWAYS" />
       </rowConstraints>
     </GridPane>
