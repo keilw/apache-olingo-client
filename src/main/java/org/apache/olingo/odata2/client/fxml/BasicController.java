@@ -220,7 +220,16 @@ public class BasicController implements Initializable {
   }
 
   private void writeToLogArea(String content) {
-    StringBuilder b = new StringBuilder();
+    writeToLogArea(content, true);
+  }
+  
+  private void writeToLogArea(String content, boolean append) {
+    final StringBuilder b;
+    if(append) {
+      b = new StringBuilder(logArea.getText());
+    } else {
+      b = new StringBuilder();
+    }
     b.append("--- ").append(DateFormat.getDateTimeInstance().format(new Date())).append("--------\n");
     b.append(content);
     b.append("\n--------------------------");
@@ -230,6 +239,7 @@ public class BasicController implements Initializable {
   private void createEdmView(ODataClient client) throws ODataException, EdmException, IOException, HttpException {
     entityListView.getItems().clear();
     List<EdmEntitySetInfo> entitySets = client.getEntitySets();
+    final double countStep = 1d / entitySets.size();
 
     for (EdmEntitySetInfo edmEntitySetInfo : entitySets) {
       String containerName = edmEntitySetInfo.getEntityContainerName();
@@ -245,6 +255,10 @@ public class BasicController implements Initializable {
         @Override
         public void run() {
           entityListView.getItems().add(holder);
+          if(progress.getProgress() < 0) {
+            progress.setProgress(0);
+          }
+          progress.setProgress(progress.getProgress() + countStep);
         }
       });
     }
