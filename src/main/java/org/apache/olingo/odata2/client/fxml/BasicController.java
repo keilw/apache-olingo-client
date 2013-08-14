@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.net.Proxy;
 import java.net.URL;
 import java.text.DateFormat;
 import java.util.Calendar;
@@ -27,7 +28,9 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ListView;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TableColumn;
@@ -53,13 +56,32 @@ import org.apache.olingo.odata2.client.StringHelper;
  */
 public class BasicController implements Initializable {
 
-  @FXML TextField inputArea;
-  @FXML TextArea rawView;
-  @FXML WebView webView;
-  @FXML SplitPane edmPane;
-  @FXML TextArea logArea;
-  @FXML ListView entityListView;
-  @FXML ProgressIndicator progress;
+  @FXML
+  TextField inputArea;
+  @FXML
+  TextArea rawView;
+  @FXML
+  WebView webView;
+  @FXML
+  SplitPane edmPane;
+  @FXML
+  TextArea logArea;
+  @FXML
+  ListView entityListView;
+  @FXML
+  ProgressIndicator progress;
+  @FXML
+  CheckBox proxyCheckbox;
+  @FXML
+  TextField proxyHost;
+  @FXML
+  TextField proxyPort;
+  @FXML
+  CheckBox loginCheckbox;
+  @FXML
+  TextField loginUser;
+  @FXML
+  PasswordField loginPassword;
   //
   private TableView tableView;
 
@@ -69,6 +91,28 @@ public class BasicController implements Initializable {
 //    inputArea.setText("http://localhost:8080/com.sap.core.odata.performance-web/ReferenceScenario.svc/");
     inputArea.setText("http://services.odata.org/Northwind/Northwind.svc/");
 
+  }
+
+  @FXML
+  public void changeProxy(ActionEvent event) {
+    if (proxyCheckbox.isSelected()) {
+      proxyHost.setDisable(false);
+      proxyPort.setDisable(false);
+    } else {
+      proxyHost.setDisable(true);
+      proxyPort.setDisable(true);
+    }
+  }
+
+  @FXML
+  public void changeLogin(ActionEvent event) {
+    if (loginCheckbox.isSelected()) {
+      loginUser.setDisable(false);
+      loginPassword.setDisable(false);
+    } else {
+      loginUser.setDisable(true);
+      loginPassword.setDisable(true);
+    }
   }
 
   @FXML
@@ -83,7 +127,8 @@ public class BasicController implements Initializable {
           final String content = StringHelper.inputStreamToString(is);
 
           Platform.runLater(new Runnable() {
-            @Override public void run() {
+            @Override
+            public void run() {
               rawView.setText(content);
               webView.getEngine().loadContent(content);
               writeToLogArea("All requests successfull processed");
@@ -93,7 +138,8 @@ public class BasicController implements Initializable {
 
         } catch (IllegalArgumentException | IOException | HttpException ex) {
           Platform.runLater(new Runnable() {
-            @Override public void run() {
+            @Override
+            public void run() {
               progress.setProgress(0);
               writeToLogArea(ex);
             }
@@ -114,11 +160,12 @@ public class BasicController implements Initializable {
       protected Void call() throws Exception {
         try {
           final String serviceUrl = getValidUrl();
-          final ODataClient client = new ODataClient(serviceUrl);
+          final ODataClient client = getODataClient(serviceUrl);
           createEdmView(client);
 
           Platform.runLater(new Runnable() {
-            @Override public void run() {
+            @Override
+            public void run() {
               String rawContent = client.getRawContentOfLastRequest();
               webView.getEngine().loadContent(rawContent);
               rawView.setText(rawContent);
@@ -129,7 +176,8 @@ public class BasicController implements Initializable {
 
         } catch (IllegalArgumentException | IOException | HttpException ex) {
           Platform.runLater(new Runnable() {
-            @Override public void run() {
+            @Override
+            public void run() {
               progress.setProgress(0);
               writeToLogArea(ex);
             }
@@ -141,6 +189,18 @@ public class BasicController implements Initializable {
 
     clearViews();
     new Thread(singleRequest).start();
+  }
+
+  private ODataClient getODataClient(final String serviceUrl) throws ODataException, IOException, HttpException {
+    if(proxyCheckbox.isSelected() && loginCheckbox.isSelected()) {
+      return new ODataClient(serviceUrl, Proxy.Type.HTTP, proxyHost.getText(), Integer.valueOf(proxyPort.getText()),
+              loginUser.getText(), loginPassword.getText());
+    } else if(proxyCheckbox.isSelected()) {
+      return new ODataClient(serviceUrl, Proxy.Type.HTTP, proxyHost.getText(), Integer.valueOf(proxyPort.getText()));
+    } else if(loginCheckbox.isSelected()) {
+      return new ODataClient(serviceUrl, loginUser.getText(), loginPassword.getText());
+    }
+    return new ODataClient(serviceUrl);
   }
 
   private void clearViews() {
@@ -182,7 +242,8 @@ public class BasicController implements Initializable {
       final ODataFeedItemHolder holder = new ODataFeedItemHolder(feed, entityType, setName);
 
       Platform.runLater(new Runnable() {
-        @Override public void run() {
+        @Override
+        public void run() {
           entityListView.getItems().add(holder);
         }
       });
