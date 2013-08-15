@@ -13,19 +13,14 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
-import javafx.concurrent.Worker;
-import javafx.concurrent.WorkerStateEvent;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.CheckBox;
@@ -56,32 +51,19 @@ import org.apache.olingo.odata2.client.StringHelper;
  */
 public class BasicController implements Initializable {
 
-  @FXML
-  TextField inputArea;
-  @FXML
-  TextArea rawView;
-  @FXML
-  WebView webView;
-  @FXML
-  SplitPane edmPane;
-  @FXML
-  TextArea logArea;
-  @FXML
-  ListView entityListView;
-  @FXML
-  ProgressIndicator progress;
-  @FXML
-  CheckBox proxyCheckbox;
-  @FXML
-  TextField proxyHost;
-  @FXML
-  TextField proxyPort;
-  @FXML
-  CheckBox loginCheckbox;
-  @FXML
-  TextField loginUser;
-  @FXML
-  PasswordField loginPassword;
+  @FXML TextField inputArea;
+  @FXML TextArea rawView;
+  @FXML WebView webView;
+  @FXML SplitPane edmPane;
+  @FXML TextArea logArea;
+  @FXML ListView entityListView;
+  @FXML ProgressIndicator progress;
+  @FXML CheckBox proxyCheckbox;
+  @FXML TextField proxyHost;
+  @FXML TextField proxyPort;
+  @FXML CheckBox loginCheckbox;
+  @FXML TextField loginUser;
+  @FXML PasswordField loginPassword;
   //
   private TableView tableView;
 
@@ -157,7 +139,7 @@ public class BasicController implements Initializable {
   public void exploreService(ActionEvent event) {
     Task<Void> singleRequest = new Task<Void>() {
       @Override
-      protected Void call() throws Exception {
+      protected Void call() {
         try {
           final String serviceUrl = getValidUrl();
           final ODataClient client = getODataClient(serviceUrl);
@@ -174,7 +156,7 @@ public class BasicController implements Initializable {
             }
           });
 
-        } catch (IllegalArgumentException | IOException | HttpException ex) {
+        } catch (ODataException | IllegalArgumentException | IOException | HttpException ex) {
           Platform.runLater(new Runnable() {
             @Override
             public void run() {
@@ -192,12 +174,12 @@ public class BasicController implements Initializable {
   }
 
   private ODataClient getODataClient(final String serviceUrl) throws ODataException, IOException, HttpException {
-    if(proxyCheckbox.isSelected() && loginCheckbox.isSelected()) {
+    if (proxyCheckbox.isSelected() && loginCheckbox.isSelected()) {
       return new ODataClient(serviceUrl, Proxy.Type.HTTP, proxyHost.getText(), Integer.valueOf(proxyPort.getText()),
               loginUser.getText(), loginPassword.getText());
-    } else if(proxyCheckbox.isSelected()) {
+    } else if (proxyCheckbox.isSelected()) {
       return new ODataClient(serviceUrl, Proxy.Type.HTTP, proxyHost.getText(), Integer.valueOf(proxyPort.getText()));
-    } else if(loginCheckbox.isSelected()) {
+    } else if (loginCheckbox.isSelected()) {
       return new ODataClient(serviceUrl, loginUser.getText(), loginPassword.getText());
     }
     return new ODataClient(serviceUrl);
@@ -222,10 +204,10 @@ public class BasicController implements Initializable {
   private void writeToLogArea(String content) {
     writeToLogArea(content, true);
   }
-  
+
   private void writeToLogArea(String content, boolean append) {
     final StringBuilder b;
-    if(append) {
+    if (append) {
       b = new StringBuilder(logArea.getText());
     } else {
       b = new StringBuilder();
@@ -246,6 +228,7 @@ public class BasicController implements Initializable {
       String setName = edmEntitySetInfo.getEntitySetName();
 
       ODataFeed feed = client.readFeed(containerName, setName, ODataClient.APPLICATION_ATOM_XML);
+      writeToLogArea(client.getRawContentOfLastRequest());
       Edm edm = client.getEdm();
       EdmEntityType entityType = edm.getEntityContainer(containerName).getEntitySet(setName).getEntityType();
 
@@ -255,7 +238,7 @@ public class BasicController implements Initializable {
         @Override
         public void run() {
           entityListView.getItems().add(holder);
-          if(progress.getProgress() < 0) {
+          if (progress.getProgress() < 0) {
             progress.setProgress(0);
           }
           progress.setProgress(progress.getProgress() + countStep);
