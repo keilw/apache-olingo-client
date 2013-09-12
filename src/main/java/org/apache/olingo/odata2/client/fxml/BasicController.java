@@ -23,6 +23,7 @@ import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ListView;
 import javafx.scene.control.PasswordField;
@@ -64,8 +65,12 @@ public class BasicController implements Initializable {
   @FXML CheckBox loginCheckbox;
   @FXML TextField loginUser;
   @FXML PasswordField loginPassword;
+  @FXML Button singleRequestButton;
+  @FXML Button exploreServiceButton;
+  
   //
   private TableView tableView;
+  private Task<Void> runningRequest = null;
 
   @Override
   public void initialize(URL url, ResourceBundle rb) {
@@ -99,80 +104,126 @@ public class BasicController implements Initializable {
 
   @FXML
   public void sendSingleRequest(ActionEvent event) {
+    if(runningRequest == null) {
+      
+      Task<Void> singleRequest = new Task<Void>() {
+        @Override
+        protected Void call() throws Exception {
+          try {
+            String serviceUrl = getValidUrl();
+            InputStream is = ODataClient.getRawHttpEntity(serviceUrl, ODataClient.APPLICATION_JSON);
+            final String content = StringHelper.inputStreamToString(is);
 
-    Task<Void> singleRequest = new Task<Void>() {
-      @Override
-      protected Void call() throws Exception {
-        try {
-          String serviceUrl = getValidUrl();
-          InputStream is = ODataClient.getRawHttpEntity(serviceUrl, ODataClient.APPLICATION_JSON);
-          final String content = StringHelper.inputStreamToString(is);
+            Platform.runLater(new Runnable() {
+              @Override
+              public void run() {
+                rawView.setText(content);
+                webView.getEngine().loadContent(content);
+                finishRunningRequest();
+                singleRequestButton.setText("Single Request");
+              }
+            });
 
-          Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-              rawView.setText(content);
-              webView.getEngine().loadContent(content);
-              writeToLogArea("All requests successfull processed");
-              progress.setProgress(1);
-            }
-          });
-
-        } catch (IllegalArgumentException | IOException | HttpException ex) {
-          Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-              progress.setProgress(0);
-              writeToLogArea(ex);
-            }
-          });
+          } catch (IllegalArgumentException | IOException | HttpException ex) {
+            Platform.runLater(new Runnable() {
+              @Override
+              public void run() {
+                failRunningRequest(ex);
+                singleRequestButton.setText("Single Request");
+              }
+            });
+          }
+          return null;
         }
-        return null;
-      }
-    };
+      };
 
-    clearViews();
-    new Thread(singleRequest).start();
+      clearViews();
+      singleRequestButton.setText("Cancel");
+      exploreServiceButton.setDisable(true);
+      runningRequest = singleRequest; 
+      new Thread(singleRequest).start();
+    } else {
+      cancelRunningRequest();
+      singleRequestButton.setText("Single Request");
+    }
+
   }
 
   @FXML
   public void exploreService(ActionEvent event) {
-    Task<Void> singleRequest = new Task<Void>() {
-      @Override
-      protected Void call() {
-        try {
-          final String serviceUrl = getValidUrl();
-          final ODataClient client = getODataClient(serviceUrl);
-          createEdmView(client);
+    if(runningRequest == null) {
+      Task<Void> singleRequest = new Task<Void>() {
+        @Override
+        protected Void call() {
+          try {
+            final String serviceUrl = getValidUrl();
+            final ODataClient client = getODataClient(serviceUrl);
+            createEdmView(client);
 
-          Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-              String rawContent = client.getRawContentOfLastRequest();
-              webView.getEngine().loadContent(rawContent);
-              rawView.setText(rawContent);
-              writeToLogArea("All requests successfull processed");
-              progress.setProgress(1);
-            }
-          });
+            Platform.runLater(new Runnable() {
+              @Override
+              public void run() {
+                String rawContent = client.getRawContentOfLastRequest();
+                webView.getEngine().loadContent(rawContent);
+                rawView.setText(rawContent);
+                exploreServiceButton.setText("Explore Service");
+                finishRunningRequest();
+              }
+            });
 
-        } catch (ODataException | IllegalArgumentException | IOException | HttpException ex) {
-          Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-              progress.setProgress(0);
-              writeToLogArea(ex);
-            }
-          });
+          } catch (ODataException | IllegalArgumentException | IOException | HttpException ex) {
+            Platform.runLater(new Runnable() {
+              @Override
+              public void run() {
+                exploreServiceButton.setText("Explore Service");
+                failRunningRequest(ex);
+              }
+            });
+          }
+          return null;
         }
-        return null;
-      }
     };
-
-    clearViews();
-    new Thread(singleRequest).start();
+    
+      clearViews();
+      exploreServiceButton.setText("Cancel");
+      singleRequestButton.setDisable(true);
+      runningRequest = singleRequest; 
+      new Thread(singleRequest).start();
+    } else {
+      cancelRunningRequest();
+      exploreServiceButton.setText("Explore Service");
+    }
   }
 
+  private void cancelRunningRequest() {
+    if(runningRequest != null) {
+      runningRequest.cancel();
+      progress.setProgress(0);
+      writeToLogArea("Canceled Running Request");
+      runningRequest = null;
+      enableRequestButtons();
+    }
+  }
+  
+  private void finishRunningRequest() {
+    writeToLogArea("All requests successfull processed");
+    progress.setProgress(1);
+    runningRequest = null;
+    enableRequestButtons();
+  }
+  
+  private void failRunningRequest(Exception ex) {
+    progress.setProgress(0);
+    writeToLogArea(ex);
+    runningRequest = null;
+    enableRequestButtons();
+  }
+
+  private void enableRequestButtons() {
+    singleRequestButton.setDisable(false);
+    exploreServiceButton.setDisable(false);
+  }
+  
   private ODataClient getODataClient(final String serviceUrl) throws ODataException, IOException, HttpException {
     if (proxyCheckbox.isSelected() && loginCheckbox.isSelected()) {
       return new ODataClient(serviceUrl, Proxy.Type.HTTP, proxyHost.getText(), Integer.valueOf(proxyPort.getText()),
@@ -190,6 +241,7 @@ public class BasicController implements Initializable {
     webView.getEngine().loadContent("");
     rawView.setText("");
     progress.setProgress(-1);
+    entityListView.getItems().clear();
   }
 
   private void writeToLogArea(Exception ex) {
