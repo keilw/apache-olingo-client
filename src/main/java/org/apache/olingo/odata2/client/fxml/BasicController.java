@@ -182,7 +182,7 @@ public class BasicController implements Initializable {
           }
           return null;
         }
-    };
+      };
     
       clearViews();
       exploreServiceButton.setText("Cancel");
@@ -285,17 +285,20 @@ public class BasicController implements Initializable {
       EdmEntityType entityType = edm.getEntityContainer(containerName).getEntitySet(setName).getEntityType();
 
       final ODataFeedItemHolder holder = new ODataFeedItemHolder(feed, entityType, setName);
-
-      Platform.runLater(new Runnable() {
+      Runnable run = new Runnable() {
         @Override
         public void run() {
+          if(runningRequest == null) {
+            return;
+          }
           entityListView.getItems().add(holder);
           if (progress.getProgress() < 0) {
             progress.setProgress(0);
           }
           progress.setProgress(progress.getProgress() + countStep);
         }
-      });
+      };
+      Platform.runLater(run);
     }
   }
 

@@ -12,6 +12,7 @@
     
   <properties>
     <slf4j.version>1.6.1</slf4j.version>
+    <version.olingo>1.0.0</version.olingo>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -77,14 +78,14 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.apache.olingo.odata2</groupId>
-      <artifactId>api</artifactId>
-      <version>1.0.0-SNAPSHOT</version>
+      <groupId>org.apache.olingo</groupId>
+      <artifactId>olingo-odata2-api-incubating</artifactId>
+      <version>${version.olingo}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.olingo.odata2</groupId>
-      <artifactId>core</artifactId>
-      <version>1.0.0-SNAPSHOT</version>
+      <groupId>org.apache.olingo</groupId>
+      <artifactId>olingo-odata2-core-incubating</artifactId>
+      <version>${version.olingo}</version>
     </dependency>
     <dependency>
       <groupId>com.oracle</groupId>
