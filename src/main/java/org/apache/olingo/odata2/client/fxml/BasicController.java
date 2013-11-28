@@ -22,7 +22,10 @@ import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ListView;
@@ -33,7 +36,9 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.web.WebView;
+import javafx.stage.Stage;
 import javafx.util.Callback;
 import org.apache.olingo.odata2.api.edm.Edm;
 import org.apache.olingo.odata2.api.edm.EdmEntitySetInfo;
@@ -43,6 +48,7 @@ import org.apache.olingo.odata2.api.ep.entry.ODataEntry;
 import org.apache.olingo.odata2.api.ep.feed.ODataFeed;
 import org.apache.olingo.odata2.api.exception.ODataException;
 import org.apache.olingo.odata2.client.HttpException;
+import org.apache.olingo.odata2.client.MainApp;
 import org.apache.olingo.odata2.client.ODataClient;
 import org.apache.olingo.odata2.client.StringHelper;
 
@@ -67,8 +73,11 @@ public class BasicController implements Initializable {
   @FXML PasswordField loginPassword;
   @FXML Button singleRequestButton;
   @FXML Button exploreServiceButton;
-  
+  @FXML AnchorPane createPane;
+
   //
+  private CreateController createController;
+
   private TableView tableView;
   private Task<Void> runningRequest = null;
 
@@ -76,7 +85,8 @@ public class BasicController implements Initializable {
   public void initialize(URL url, ResourceBundle rb) {
 //    inputArea.setText("http://www.olingo.org");
 //    inputArea.setText("http://localhost:8080/com.sap.core.odata.performance-web/ReferenceScenario.svc/");
-    inputArea.setText("http://services.odata.org/Northwind/Northwind.svc/");
+//    inputArea.setText("http://services.odata.org/Northwind/Northwind.svc/");
+    inputArea.setText("http://localhost:8080/MyFormula.svc/");
 
   }
 
@@ -102,10 +112,41 @@ public class BasicController implements Initializable {
     }
   }
 
+  
+  public void editEntity(ListView.EditEvent e) {
+    if(createController == null || createController.isClosed()) {
+      int index = e.getIndex();
+      Object value = entityListView.getItems().get(index);
+      if(value instanceof ODataFeedItemHolder) {
+        ODataFeedItemHolder holder = (ODataFeedItemHolder) value;
+        createController = createEntityCreate(holder);
+      }
+    }
+  }
+  
+  private CreateController createEntityCreate(ODataFeedItemHolder holder) {
+    try {
+      FXMLLoader l = new FXMLLoader(MainApp.class.getResource("fxml/Create.fxml"));
+      l.load();
+      CreateController create = l.getController();
+      
+      String serviceUrl = getValidUrl();
+      ODataClient client = getODataClient(serviceUrl);
+
+      create.init(client, holder.name, holder.type);
+      create.show();
+
+      return create;
+    } catch (Exception ex) {
+      ex.printStackTrace();
+      throw new RuntimeException("Error in preview pane creation", ex);
+    }
+  }
+
   @FXML
   public void sendSingleRequest(ActionEvent event) {
-    if(runningRequest == null) {
-      
+    if (runningRequest == null) {
+
       Task<Void> singleRequest = new Task<Void>() {
         @Override
         protected Void call() throws Exception {
@@ -140,7 +181,7 @@ public class BasicController implements Initializable {
       clearViews();
       singleRequestButton.setText("Cancel");
       exploreServiceButton.setDisable(true);
-      runningRequest = singleRequest; 
+      runningRequest = singleRequest;
       new Thread(singleRequest).start();
     } else {
       cancelRunningRequest();
@@ -151,7 +192,7 @@ public class BasicController implements Initializable {
 
   @FXML
   public void exploreService(ActionEvent event) {
-    if(runningRequest == null) {
+    if (runningRequest == null) {
       Task<Void> singleRequest = new Task<Void>() {
         @Override
         protected Void call() {
@@ -183,11 +224,11 @@ public class BasicController implements Initializable {
           return null;
         }
       };
-    
+
       clearViews();
       exploreServiceButton.setText("Cancel");
       singleRequestButton.setDisable(true);
-      runningRequest = singleRequest; 
+      runningRequest = singleRequest;
       new Thread(singleRequest).start();
     } else {
       cancelRunningRequest();
@@ -196,7 +237,7 @@ public class BasicController implements Initializable {
   }
 
   private void cancelRunningRequest() {
-    if(runningRequest != null) {
+    if (runningRequest != null) {
       runningRequest.cancel();
       progress.setProgress(0);
       writeToLogArea("Canceled Running Request");
@@ -204,14 +245,14 @@ public class BasicController implements Initializable {
       enableRequestButtons();
     }
   }
-  
+
   private void finishRunningRequest() {
     writeToLogArea("All requests successfull processed");
     progress.setProgress(1);
     runningRequest = null;
     enableRequestButtons();
   }
-  
+
   private void failRunningRequest(Exception ex) {
     progress.setProgress(0);
     writeToLogArea(ex);
@@ -223,7 +264,7 @@ public class BasicController implements Initializable {
     singleRequestButton.setDisable(false);
     exploreServiceButton.setDisable(false);
   }
-  
+
   private ODataClient getODataClient(final String serviceUrl) throws ODataException, IOException, HttpException {
     if (proxyCheckbox.isSelected() && loginCheckbox.isSelected()) {
       return new ODataClient(serviceUrl, Proxy.Type.HTTP, proxyHost.getText(), Integer.valueOf(proxyPort.getText()),
@@ -272,6 +313,8 @@ public class BasicController implements Initializable {
 
   private void createEdmView(ODataClient client) throws ODataException, EdmException, IOException, HttpException {
     entityListView.getItems().clear();
+    entityListView.setEditable(true);
+    
     List<EdmEntitySetInfo> entitySets = client.getEntitySets();
     final double countStep = 1d / entitySets.size();
 
@@ -288,7 +331,7 @@ public class BasicController implements Initializable {
       Runnable run = new Runnable() {
         @Override
         public void run() {
-          if(runningRequest == null) {
+          if (runningRequest == null) {
             return;
           }
           entityListView.getItems().add(holder);
@@ -329,9 +372,7 @@ public class BasicController implements Initializable {
   }
 
   /**
-   * Use of Event to allow processing of
-   * <code>MouseEvents</code> as well as
-   * <code>ActionEvents</code>.
+   * Use of Event to allow processing of <code>MouseEvents</code> as well as <code>ActionEvents</code>.
    *
    * @param event
    */
