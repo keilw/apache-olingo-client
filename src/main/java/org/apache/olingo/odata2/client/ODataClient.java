@@ -9,21 +9,32 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.Proxy;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.olingo.odata2.api.commons.HttpHeaders;
 import org.apache.olingo.odata2.api.commons.HttpStatusCodes;
 import org.apache.olingo.odata2.api.edm.Edm;
 import org.apache.olingo.odata2.api.edm.EdmEntityContainer;
+import org.apache.olingo.odata2.api.edm.EdmEntitySet;
 import org.apache.olingo.odata2.api.edm.EdmEntitySetInfo;
+import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.ep.EntityProvider;
+import org.apache.olingo.odata2.api.ep.EntityProviderException;
 import org.apache.olingo.odata2.api.ep.EntityProviderReadProperties;
+import org.apache.olingo.odata2.api.ep.EntityProviderWriteProperties;
 import org.apache.olingo.odata2.api.ep.feed.ODataFeed;
 import org.apache.olingo.odata2.api.exception.ODataException;
+import org.apache.olingo.odata2.api.processor.ODataResponse;
+import org.apache.olingo.odata2.core.commons.ContentType;
 
 public class ODataClient {
 
@@ -68,7 +79,8 @@ public class ODataClient {
     edm = getEdmInternal();
   }
 
-  public ODataClient(String serviceUrl, Proxy.Type protocol, String proxy, int port, String username, String password) throws IOException, ODataException, HttpException {
+  public ODataClient(String serviceUrl, Proxy.Type protocol, String proxy, int port, String username, String password)
+          throws IOException, ODataException, HttpException {
     this.serviceUrl = serviceUrl;
     this.proxyProtocol = protocol;
     this.proxyHostname = proxy;
@@ -92,7 +104,7 @@ public class ODataClient {
   }
 
   private Edm getEdmInternal() throws IOException, ODataException, HttpException {
-    if(edm == null) {
+    if (edm == null) {
       HttpURLConnection connection = connect(METADATA, APPLICATION_XML, "GET");
       edm = EntityProvider.readMetadata((InputStream) connection.getContent(), false);
     }
@@ -125,7 +137,58 @@ public class ODataClient {
 
     InputStream content = (InputStream) connect(relativeUri, contentType, "GET").getContent();
     content = storeRawContent(content);
-    return EntityProvider.readFeed(contentType, entityContainer.getEntitySet(entitySetName), content, EntityProviderReadProperties.init().build());
+    return EntityProvider.
+            readFeed(contentType, entityContainer.getEntitySet(entitySetName), content, EntityProviderReadProperties.
+                    init().build());
+  }
+
+  public void postEntity(String entitySetName, Map<String, Object> data) {
+    String contentType = ContentType.APPLICATION_JSON.toContentTypeString();
+    postEntity(entitySetName, data, contentType);
+  }
+
+  public void postEntity(String entitySetName, Map<String, Object> data, String contentType) {
+
+    try {
+      HttpURLConnection connection = initializeConnection(entitySetName, contentType, "POST");
+
+      EdmEntitySet entitySet = getEntitySet(entitySetName);
+      URI rootUri = new URI(entitySetName);
+
+      EntityProviderWriteProperties properties = EntityProviderWriteProperties.serviceRoot(rootUri).build();
+      ODataResponse response = EntityProvider.writeEntry(contentType, entitySet, data, properties);
+      Object entity = response.getEntity();
+      if (entity instanceof InputStream) {
+        InputStream is = (InputStream) entity;
+        byte[] buffer = new byte[2048];
+        int size = is.read(buffer);
+
+        connection.setDoOutput(true);
+        //
+        Logger.getLogger(ODataClient.class.getName()).log(Level.INFO, "\n" + new String(buffer, 0, size) + "\n");
+        //
+        connection.getOutputStream().write(buffer, 0, size);
+      }
+
+      connection.connect();
+
+      storeRawContent(connection.getInputStream());
+      checkStatus(connection);
+
+      connection.disconnect();
+    } catch (Exception ex) {
+      Logger.getLogger(ODataClient.class.getName()).log(Level.SEVERE, null, ex);
+    }
+  }
+
+  private EdmEntitySet getEntitySet(String name) throws EdmException {
+    List<EdmEntitySet> entitySets = edm.getEntitySets();
+    for (EdmEntitySet edmEntitySet : entitySets) {
+      if (edmEntitySet.getName().equals(name)) {
+        return edmEntitySet;
+      }
+    }
+    return null;
   }
 
   public static InputStream getRawHttpEntity(String relativeUri, String contentType) throws HttpException, IOException {
@@ -134,6 +197,16 @@ public class ODataClient {
   }
 
   private HttpURLConnection connect(String relativeUri, String contentType, String httpMethod) throws IOException, HttpException {
+    HttpURLConnection connection = initializeConnection(relativeUri, contentType, httpMethod);
+
+    connection.connect();
+
+    checkStatus(connection);
+
+    return connection;
+  }
+
+  private HttpURLConnection initializeConnection(String relativeUri, String contentType, String httpMethod) throws MalformedURLException, IOException {
     URL url = new URL(serviceUrl + relativeUri);
     HttpURLConnection connection;
     if (useProxy) {
@@ -144,16 +217,13 @@ public class ODataClient {
     }
     connection.setRequestMethod(httpMethod);
     connection.setRequestProperty("Accept", contentType);
+    connection.setRequestProperty(HttpHeaders.CONTENT_TYPE, contentType);
 
     if (useAuthentication) {
       String authorization = "Basic ";
       authorization += new String(Base64.encodeBase64((username + ":" + password).getBytes()));
       connection.setRequestProperty("Authorization", authorization);
     }
-
-    connection.connect();
-
-    checkStatus(connection);
 
     return connection;
   }

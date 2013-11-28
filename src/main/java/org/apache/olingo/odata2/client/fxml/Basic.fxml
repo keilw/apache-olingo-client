@@ -12,7 +12,7 @@
 <?import javafx.scene.web.*?>
 <?scenebuilder-stylesheet application.css?>
 
-<AnchorPane id="AnchorPane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="200.0" minWidth="200.0" prefHeight="350.0" prefWidth="400.0" styleClass="BasicFxmlClass" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="org.apache.olingo.odata2.client.fxml.BasicController">
+<AnchorPane id="AnchorPane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="300.0" minWidth="400.0" prefHeight="500.0" prefWidth="700.0" styleClass="BasicFxmlClass" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="org.apache.olingo.odata2.client.fxml.BasicController">
   <children>
     <GridPane id="GridPane" alignment="CENTER" maxHeight="1.7976931348623157E308" minHeight="200.0" minWidth="200.0" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
       <children>
@@ -31,7 +31,7 @@
                   <children>
                     <SplitPane id="SplitPane" fx:id="edmPane" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                       <items>
-                        <ListView fx:id="entityListView" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" onKeyReleased="#updateTableView" onMouseReleased="#updateTableView" prefHeight="200.0" prefWidth="200.0" />
+                        <ListView fx:id="entityListView" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" onEditStart="#editEntity" onKeyReleased="#updateTableView" onMouseReleased="#updateTableView" prefHeight="200.0" prefWidth="200.0" />
                       </items>
                     </SplitPane>
                   </children>
