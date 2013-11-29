@@ -22,7 +22,6 @@
           </GridPane.margin>
         </Button>
         <Label alignment="CENTER" prefWidth="54.0" text="Url:" GridPane.columnIndex="0" GridPane.rowIndex="0" />
-        <TextField fx:id="inputArea" maxWidth="1.7976931348623157E308" prefWidth="200.0" GridPane.columnIndex="1" GridPane.columnSpan="2147483647" GridPane.rowIndex="0" />
         <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="200.0" prefWidth="200.0" tabClosingPolicy="UNAVAILABLE" GridPane.columnIndex="0" GridPane.columnSpan="2147483647" GridPane.hgrow="ALWAYS" GridPane.rowIndex="4" GridPane.vgrow="ALWAYS">
           <tabs>
             <Tab text="EDM">
@@ -79,6 +78,15 @@
         <CheckBox fx:id="proxyCheckbox" mnemonicParsing="false" onAction="#changeProxy" text="Proxy" GridPane.columnIndex="0" GridPane.rowIndex="1" />
         <CheckBox fx:id="loginCheckbox" mnemonicParsing="false" onAction="#changeLogin" text="Login" GridPane.columnIndex="0" GridPane.rowIndex="2" />
         <TextField fx:id="proxyPort" disable="true" prefWidth="200.0" text="8080" GridPane.columnIndex="2" GridPane.rowIndex="1" />
+        <ComboBox id="uriSelection" fx:id="uriSelector" editable="true" maxWidth="1.7976931348623157E308" promptText="Insert uri here or select..." GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="0">
+          <items>
+            <FXCollections fx:factory="observableArrayList">
+              <String fx:value="Item 1" />
+              <String fx:value="Item 2" />
+              <String fx:value="Item 3" />
+            </FXCollections>
+          </items>
+        </ComboBox>
       </children>
       <columnConstraints>
         <ColumnConstraints halignment="CENTER" hgrow="NEVER" minWidth="80.0" prefWidth="50.0" />
