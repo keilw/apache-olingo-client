@@ -8,7 +8,7 @@
   <name>Olingo Sample Client</name>
 
   <packaging>jar</packaging>
-  <version>0.2.0</version>
+  <version>0.3.0-SNAPSHOT</version>
     
   <properties>
     <slf4j.version>1.6.1</slf4j.version>
