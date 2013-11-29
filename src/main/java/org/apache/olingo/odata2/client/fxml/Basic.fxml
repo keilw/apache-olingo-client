@@ -31,7 +31,7 @@
                   <children>
                     <SplitPane id="SplitPane" fx:id="edmPane" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                       <items>
-                        <ListView fx:id="entityListView" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" onEditStart="#editEntity" onKeyReleased="#updateTableView" onMouseReleased="#updateTableView" prefHeight="200.0" prefWidth="200.0" />
+                        <ListView fx:id="entityListView" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" onKeyReleased="#updateTableView" onMouseClicked="#createEntity" onMouseReleased="#updateTableView" prefHeight="200.0" prefWidth="200.0" />
                       </items>
                     </SplitPane>
                   </children>
