@@ -13,6 +13,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
@@ -22,14 +24,13 @@ import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
-import javafx.event.EventTarget;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
-import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.ProgressIndicator;
@@ -40,8 +41,10 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.Priority;
 import javafx.scene.web.WebView;
-import javafx.stage.Stage;
 import javafx.util.Callback;
 import org.apache.olingo.odata2.api.edm.Edm;
 import org.apache.olingo.odata2.api.edm.EdmEntitySetInfo;
@@ -115,18 +118,20 @@ public class BasicController implements Initializable {
   }
 
   
-  public void editEntity(ListView.EditEvent e) {
-    if(createController == null || createController.isClosed()) {
-      int index = e.getIndex();
-      Object value = entityListView.getItems().get(index);
-      if(value instanceof ODataFeedItemHolder) {
-        ODataFeedItemHolder holder = (ODataFeedItemHolder) value;
-        createController = createEntityCreate(holder);
+  @FXML
+  public void createEntity(MouseEvent e) {
+    if(e.getClickCount() > 1) {
+      if(createController == null || createController.isClosed()) {
+        Object value = entityListView.getSelectionModel().getSelectedItem();
+        if(value instanceof ODataFeedItemHolder) {
+          ODataFeedItemHolder holder = (ODataFeedItemHolder) value;
+          createController = createEntityCreateDialog(holder);
+        }
       }
     }
   }
   
-  private CreateController createEntityCreate(ODataFeedItemHolder holder) {
+  private CreateController createEntityCreateDialog(ODataFeedItemHolder holder) {
     try {
       CreateController create = createCreateController();
       
@@ -143,7 +148,7 @@ public class BasicController implements Initializable {
     }
   }
 
-  private CreateController createEntityCreate(String entitySetName, EdmEntityType edmEntityType, ODataEntry oDataEntry) {
+  private CreateController createEntityUpdateDialog(String entitySetName, EdmEntityType edmEntityType, ODataEntry oDataEntry) {
     try {
       CreateController create = createCreateController();
       
@@ -336,7 +341,13 @@ public class BasicController implements Initializable {
 
   private void createEdmView(ODataClient client) throws ODataException, EdmException, IOException, HttpException {
     entityListView.getItems().clear();
-    entityListView.setEditable(true);
+//    entityListView.setEditable(true);
+    entityListView.setCellFactory(new Callback<ListView<String>, ListCell<ODataFeedItemHolder>>() {
+      @Override
+      public ListCell<ODataFeedItemHolder> call(ListView<String> param) {
+        return new ODataFeedCell();
+      }
+    });
     
     List<EdmEntitySetInfo> entitySets = client.getEntitySets();
     final double countStep = 1d / entitySets.size();
@@ -365,6 +376,71 @@ public class BasicController implements Initializable {
         }
       };
       Platform.runLater(run);
+    }
+  }
+  
+  private class ODataFeedCell extends ListCell<ODataFeedItemHolder> {
+    HBox hbox = new HBox();
+    Label label = new Label("(empty)");
+    Pane pane = new Pane();
+    Button refreshButton = new Button("Refresh");
+    Button createButton = new Button("Create");
+    ODataFeedItemHolder lastItem;
+
+    public ODataFeedCell() {
+      super();
+      hbox.getChildren().addAll(label, pane, refreshButton, createButton);
+      HBox.setHgrow(pane, Priority.ALWAYS);
+      
+      refreshButton.setOnAction(new EventHandler<ActionEvent>() {
+        @Override
+        public void handle(ActionEvent event) {
+          refreshODataFeed(lastItem);
+        }
+      });
+
+      createButton.setOnAction(new EventHandler<ActionEvent>() {
+        @Override
+        public void handle(ActionEvent event) {
+          createEntityCreateDialog(lastItem);
+        }
+      });
+    }
+
+    @Override
+    protected void updateItem(ODataFeedItemHolder item, boolean empty) {
+      super.updateItem(item, empty);
+      setText(null);  // No text in label of super class
+      if (empty) {
+        lastItem = null;
+        setGraphic(null);
+      } else {
+        lastItem = item;
+        label.setText(item != null ? item.name : "<null>");
+        setGraphic(hbox);
+      }
+    }
+  }
+
+  private void refreshODataFeed(ODataFeedItemHolder lastItem) {
+    try {
+      String setName = lastItem.name;
+      final ODataClient client = getODataClient(getValidUrl());
+      List<EdmEntitySetInfo> entitySets = client.getEntitySets();
+      EdmEntitySetInfo edmEntitySetInfo = null;
+      for (EdmEntitySetInfo info : entitySets) {
+        if(info.getEntitySetName().equals(setName)) {
+          edmEntitySetInfo = info;
+        }
+      }
+      if(edmEntitySetInfo != null) {
+        String containerName = edmEntitySetInfo.getEntityContainerName();
+
+        ODataFeed feed = client.readFeed(containerName, setName, ODataClient.APPLICATION_ATOM_XML);
+        updateTableView(new ODataFeedItemHolder(feed, lastItem.type, setName));
+      }
+    } catch (Exception ex) {
+      Logger.getLogger(BasicController.class.getName()).log(Level.SEVERE, null, ex);
     }
   }
 
@@ -401,20 +477,25 @@ public class BasicController implements Initializable {
    */
   @FXML
   public void updateTableView(Event event) {
+    ODataFeedItemHolder feed = (ODataFeedItemHolder) entityListView.getSelectionModel().getSelectedItem();
+    updateTableView(feed);
+  }
+
+  private void updateTableView(ODataFeedItemHolder feed) {
     try {
-      if (tableView != null) {
-        edmPane.getItems().remove(tableView);
+      if(feed != null) {
+        if (tableView != null) {
+          edmPane.getItems().remove(tableView);
+        }
+        tableView = createTable(feed);
+        edmPane.getItems().add(tableView);
       }
-      ODataFeedItemHolder feed = (ODataFeedItemHolder) entityListView.getSelectionModel().getSelectedItem();
-      //      EdmEntityType entityType = edm.getEntityContainer(containerName).getEntitySet(setName).getEntityType();
-      tableView = createTable(feed);
-      edmPane.getItems().add(tableView);
     } catch (EdmException ex) {
       writeToLogArea(ex);
     }
-
   }
 
+  
   private boolean isEmpty(String forValidation) {
     return forValidation == null || forValidation.length() == 0;
   }
@@ -439,7 +520,7 @@ public class BasicController implements Initializable {
       public void handle(MouseEvent t) {
         if(t.getClickCount() > 1) {
           Object selectedItem = table.getSelectionModel().getSelectedItem();
-          createEntityCreate(feedItem.name, feedItem.type, (ODataEntry) selectedItem);
+          createEntityUpdateDialog(feedItem.name, feedItem.type, (ODataEntry) selectedItem);
         }
       }
     });

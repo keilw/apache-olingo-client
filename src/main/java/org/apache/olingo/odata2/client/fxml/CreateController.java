@@ -5,6 +5,7 @@
  */
 package org.apache.olingo.odata2.client.fxml;
 
+import java.io.File;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -18,7 +19,6 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Pos;
@@ -27,9 +27,9 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.effect.BlendMode;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextAlignment;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import org.apache.olingo.odata2.api.edm.EdmEntityType;
@@ -48,6 +48,8 @@ public class CreateController implements Initializable {
 
   @FXML Node root;
 
+  @FXML TextField csvLocation;
+  
   @FXML Button submitButton;
   @FXML VBox labelBox;
   @FXML VBox textBox;
@@ -63,7 +65,17 @@ public class CreateController implements Initializable {
 
   enum Method {PUT, POST, DELETE};
   
-  void initPut(ODataClient client, String entitySetName, EdmEntityType entityType, ODataEntry oDataEntry) throws EdmException {
+  @FXML
+  public void chooseCsvFileLocation(ActionEvent event) {
+    FileChooser fileChooser = new FileChooser();
+    fileChooser.setTitle("Open Resource File");
+    File csvFile = fileChooser.showOpenDialog(viewStage);
+    if(csvFile != null) {
+      csvLocation.setText(csvFile.getAbsolutePath());
+    }
+  }
+  
+  public void initPut(ODataClient client, String entitySetName, EdmEntityType entityType, ODataEntry oDataEntry) throws EdmException {
     this.entitySetName = entitySetName;
     this.entityType = entityType;
     this.client = client;
@@ -82,16 +94,6 @@ public class CreateController implements Initializable {
     initEntityKeyForUri(entityType, oDataEntries);    
   }
 
-  private void initEntityKeyForUri(EdmEntityType entityType, Map<String, Object> oDataEntries) throws EdmException {
-    EdmProperty prop = entityType.getKeyProperties().get(0);
-    String keyName = prop.getName();
-    Object keyValue = oDataEntries.get(keyName);
-    if("String".equals(prop.getType().getName())) {
-      entityKeyForUri = "('" + value2Text(keyValue) + "')";
-    } else {
-      entityKeyForUri = "(" + value2Text(keyValue) + ")";
-    }
-  }
 
   public void initPost(ODataClient client, String entitySetName, EdmEntityType entityType) throws EdmException {
     this.entityType = entityType;
@@ -103,6 +105,17 @@ public class CreateController implements Initializable {
     List<String> propertyNames = entityType.getPropertyNames();
     for (String name : propertyNames) {
       addProperty(entityType, name);
+    }
+  }
+
+  private void initEntityKeyForUri(EdmEntityType entityType, Map<String, Object> oDataEntries) throws EdmException {
+    EdmProperty prop = entityType.getKeyProperties().get(0);
+    String keyName = prop.getName();
+    Object keyValue = oDataEntries.get(keyName);
+    if("String".equals(prop.getType().getName())) {
+      entityKeyForUri = "('" + value2Text(keyValue) + "')";
+    } else {
+      entityKeyForUri = "(" + value2Text(keyValue) + ")";
     }
   }
 
@@ -134,10 +147,6 @@ public class CreateController implements Initializable {
     name2Input.put(name, text);
   }
   
-  private void addProperty(String name, String value) {
-    
-  }
-
   public Node getRoot() {
     return root;
   }
