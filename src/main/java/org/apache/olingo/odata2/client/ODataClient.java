@@ -142,15 +142,24 @@ public class ODataClient {
                     init().build());
   }
 
+  public void putEntity(String entitySetName, String uriId, Map<String, Object> data) {
+    String contentType = ContentType.APPLICATION_JSON.toContentTypeString();
+    writeEntity(entitySetName + uriId, entitySetName, data, contentType, "PUT");
+  }
+
   public void postEntity(String entitySetName, Map<String, Object> data) {
     String contentType = ContentType.APPLICATION_JSON.toContentTypeString();
     postEntity(entitySetName, data, contentType);
   }
 
   public void postEntity(String entitySetName, Map<String, Object> data, String contentType) {
+    writeEntity(entitySetName, entitySetName, data, contentType, "POST");
+  }
+
+  private void writeEntity(String relativeUri, String entitySetName, Map<String, Object> data, String contentType, String httpMethod) {
 
     try {
-      HttpURLConnection connection = initializeConnection(entitySetName, contentType, "POST");
+      HttpURLConnection connection = initializeConnection(relativeUri, contentType, httpMethod);
 
       EdmEntitySet entitySet = getEntitySet(entitySetName);
       URI rootUri = new URI(entitySetName);
