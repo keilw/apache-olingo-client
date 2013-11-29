@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Pos;
@@ -26,6 +27,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.effect.BlendMode;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
@@ -46,11 +48,11 @@ public class CreateController implements Initializable {
 
   @FXML Node root;
 
-  @FXML Button createButton;
+  @FXML Button submitButton;
   @FXML VBox labelBox;
   @FXML VBox textBox;
 
-  private String entityKeyValue;
+  private String entityKeyForUri;
   private EdmEntityType entityType;
   private ODataClient client;
   private boolean closed = false;
@@ -66,32 +68,29 @@ public class CreateController implements Initializable {
     this.entityType = entityType;
     this.client = client;
     this.method = Method.PUT;
+    this.submitButton.setText("Update");
 
     Map<String, Object> oDataEntries = oDataEntry.getProperties();
     List<String> propertyNames = entityType.getPropertyNames();
     for (String name : propertyNames) {
       EdmProperty property = (EdmProperty) entityType.getProperty(name);
-              
-      Label label = new Label(name + " (" + property.getType().getName() + "):");
-      label.setAlignment(Pos.CENTER_RIGHT);
-      label.setTextAlignment(TextAlignment.RIGHT);
-      label.setMinHeight(20);
-      label.setPrefHeight(30);
-      label.setPrefWidth(200);
-      
       Object value = oDataEntries.get(property.getName());
-      TextField text = new TextField(value2Text(value));
-      text.setMinHeight(20);
-      text.setPrefHeight(30);
-      labelBox.getChildren().add(label);
-      textBox.getChildren().add(text);
 
-      name2Input.put(name, text);
+      addProperty(entityType, name, value2Text(value));
     }
     
-    String keyName = entityType.getKeyProperties().get(0).getName();
+    initEntityKeyForUri(entityType, oDataEntries);    
+  }
+
+  private void initEntityKeyForUri(EdmEntityType entityType, Map<String, Object> oDataEntries) throws EdmException {
+    EdmProperty prop = entityType.getKeyProperties().get(0);
+    String keyName = prop.getName();
     Object keyValue = oDataEntries.get(keyName);
-    entityKeyValue = value2Text(keyValue);
+    if("String".equals(prop.getType().getName())) {
+      entityKeyForUri = "('" + value2Text(keyValue) + "')";
+    } else {
+      entityKeyForUri = "(" + value2Text(keyValue) + ")";
+    }
   }
 
   public void initPost(ODataClient client, String entitySetName, EdmEntityType entityType) throws EdmException {
@@ -99,27 +98,44 @@ public class CreateController implements Initializable {
     this.client = client;
     this.entitySetName = entitySetName;
     this.method = Method.POST;
+    this.submitButton.setText("Create");
 
     List<String> propertyNames = entityType.getPropertyNames();
     for (String name : propertyNames) {
-      EdmProperty property = (EdmProperty) entityType.getProperty(name);
-              
-      Label label = new Label(name + " (" + property.getType().getName() + "):");
-      label.setAlignment(Pos.CENTER_RIGHT);
-      label.setTextAlignment(TextAlignment.RIGHT);
-      label.setMinHeight(20);
-      label.setPrefHeight(30);
-      label.setPrefWidth(200);
-      
-      TextField text = new TextField();
-      text.setMinHeight(20);
-      text.setPrefHeight(30);
-      
-      labelBox.getChildren().add(label);
-      textBox.getChildren().add(text);
-
-      name2Input.put(name, text);
+      addProperty(entityType, name);
     }
+  }
+
+  private void addProperty(EdmEntityType entityType, String name) throws EdmException {
+    addProperty(entityType, name, "");
+  }
+  
+  private void addProperty(EdmEntityType entityType, String name, String value) throws EdmException {
+    EdmProperty property = (EdmProperty) entityType.getProperty(name);
+    final String propertyType = property.getType().getName();
+    
+    Label label = new Label(name + " (" + propertyType + "):");
+    label.setAlignment(Pos.CENTER_RIGHT);
+    label.setTextAlignment(TextAlignment.RIGHT);
+    label.setMinHeight(20);
+    label.setPrefHeight(30);
+    label.setPrefWidth(200);
+    
+    final TextField text = new TextField(value);
+    text.setMinHeight(20);
+    text.setPrefHeight(30);
+    if(value == null || value.isEmpty()) {
+      text.setPromptText("Enter " + propertyType + " value here.");
+    }
+    
+    labelBox.getChildren().add(label);
+    textBox.getChildren().add(text);
+    
+    name2Input.put(name, text);
+  }
+  
+  private void addProperty(String name, String value) {
+    
   }
 
   public Node getRoot() {
@@ -147,7 +163,7 @@ public class CreateController implements Initializable {
           client.postEntity(entitySetName, content);
           break;
         case PUT:
-          client.putEntity(entitySetName, "('" + entityKeyValue + "')", content);
+          client.putEntity(entitySetName, entityKeyForUri, content);
           break;
       }
 
