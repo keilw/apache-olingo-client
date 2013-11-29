@@ -29,6 +29,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -63,7 +64,7 @@ import org.apache.olingo.odata2.client.StringHelper;
  */
 public class BasicController implements Initializable {
 
-  @FXML TextField inputArea;
+  @FXML ComboBox<String> uriSelector;
   @FXML TextArea rawView;
   @FXML WebView webView;
   @FXML SplitPane edmPane;
@@ -88,11 +89,14 @@ public class BasicController implements Initializable {
 
   @Override
   public void initialize(URL url, ResourceBundle rb) {
-//    inputArea.setText("http://www.olingo.org");
-//    inputArea.setText("http://localhost:8080/com.sap.core.odata.performance-web/ReferenceScenario.svc/");
-//    inputArea.setText("http://services.odata.org/Northwind/Northwind.svc/");
-    inputArea.setText("http://localhost:8080/MyFormula.svc/");
+    ObservableList<String> items = FXCollections.observableArrayList();
+    items.add("http://www.olingo.org");
+    items.add("http://localhost:8080/com.sap.core.odata.performance-web/ReferenceScenario.svc/");
+    items.add("http://services.odata.org/Northwind/Northwind.svc/");
+    items.add("http://localhost:8080/MyFormula.svc/");
 
+    uriSelector.setItems(items);
+    uriSelector.getSelectionModel().selectLast();
   }
 
   @FXML
@@ -445,7 +449,7 @@ public class BasicController implements Initializable {
   }
 
   private String getValidUrl() throws IllegalArgumentException {
-    String serviceUrl = inputArea.getText();
+    String serviceUrl = uriSelector.getSelectionModel().getSelectedItem();
     if (isEmpty(serviceUrl)) {
       throw new IllegalArgumentException("No url given.");
     }
