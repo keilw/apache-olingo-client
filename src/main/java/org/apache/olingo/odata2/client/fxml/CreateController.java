@@ -8,6 +8,7 @@ package org.apache.olingo.odata2.client.fxml;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -33,6 +34,7 @@ import org.apache.olingo.odata2.api.edm.EdmEntityType;
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.edm.EdmProperty;
 import org.apache.olingo.odata2.api.edm.EdmType;
+import org.apache.olingo.odata2.api.ep.entry.ODataEntry;
 import org.apache.olingo.odata2.client.ODataClient;
 
 /**
@@ -48,17 +50,55 @@ public class CreateController implements Initializable {
   @FXML VBox labelBox;
   @FXML VBox textBox;
 
+  private String entityKeyValue;
   private EdmEntityType entityType;
   private ODataClient client;
   private boolean closed = false;
   private Stage viewStage;
   private String entitySetName;
+  private Method method = Method.POST;
   private Map<String, TextField> name2Input = new HashMap<>();
 
-  public void init(ODataClient client, String entitySetName, EdmEntityType entityType) throws EdmException {
+  enum Method {PUT, POST, DELETE};
+  
+  void initPut(ODataClient client, String entitySetName, EdmEntityType entityType, ODataEntry oDataEntry) throws EdmException {
+    this.entitySetName = entitySetName;
+    this.entityType = entityType;
+    this.client = client;
+    this.method = Method.PUT;
+
+    Map<String, Object> oDataEntries = oDataEntry.getProperties();
+    List<String> propertyNames = entityType.getPropertyNames();
+    for (String name : propertyNames) {
+      EdmProperty property = (EdmProperty) entityType.getProperty(name);
+              
+      Label label = new Label(name + " (" + property.getType().getName() + "):");
+      label.setAlignment(Pos.CENTER_RIGHT);
+      label.setTextAlignment(TextAlignment.RIGHT);
+      label.setMinHeight(20);
+      label.setPrefHeight(30);
+      label.setPrefWidth(200);
+      
+      Object value = oDataEntries.get(property.getName());
+      TextField text = new TextField(value2Text(value));
+      text.setMinHeight(20);
+      text.setPrefHeight(30);
+      labelBox.getChildren().add(label);
+      textBox.getChildren().add(text);
+
+      name2Input.put(name, text);
+    }
+    
+    String keyName = entityType.getKeyProperties().get(0).getName();
+    Object keyValue = oDataEntries.get(keyName);
+    entityKeyValue = value2Text(keyValue);
+  }
+
+  public void initPost(ODataClient client, String entitySetName, EdmEntityType entityType) throws EdmException {
     this.entityType = entityType;
     this.client = client;
     this.entitySetName = entitySetName;
+    this.method = Method.POST;
 
     List<String> propertyNames = entityType.getPropertyNames();
     for (String name : propertyNames) {
@@ -102,7 +142,14 @@ public class CreateController implements Initializable {
   public void createEntity(ActionEvent event) {
     try {
       Map<String, Object> content = getContentMap();
-      client.postEntity(this.entitySetName, content);
+      switch (method) {
+        case POST:
+          client.postEntity(entitySetName, content);
+          break;
+        case PUT:
+          client.putEntity(entitySetName, "('" + entityKeyValue + "')", content);
+          break;
+      }
 
       closeStage();
     } catch (EdmException ex) {
@@ -180,12 +227,25 @@ public class CreateController implements Initializable {
       return result;
   }
 
+  SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
   private Date text2Date(String text) {
-    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
     try {
       return sdf.parse(text);
     } catch (ParseException ex) {
       return new Date();
     }
+  }
+  
+  private String value2Text(Object value) {
+    if(value instanceof Date) {
+      return date2Text((Date) value);
+    } else if(value instanceof Calendar) {
+      return date2Text(((Calendar)value).getTime());
+    }
+    return String.valueOf(value);
+  }
+          
+  private String date2Text(Date date) {
+    return sdf.format(date);
   }
 }

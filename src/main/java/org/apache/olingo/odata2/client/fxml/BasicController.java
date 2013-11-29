@@ -21,6 +21,8 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
+import javafx.event.EventHandler;
+import javafx.event.EventTarget;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
@@ -36,6 +38,7 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
@@ -54,7 +57,6 @@ import org.apache.olingo.odata2.client.StringHelper;
 
 /**
  *
- * @author mibo
  */
 public class BasicController implements Initializable {
 
@@ -126,14 +128,12 @@ public class BasicController implements Initializable {
   
   private CreateController createEntityCreate(ODataFeedItemHolder holder) {
     try {
-      FXMLLoader l = new FXMLLoader(MainApp.class.getResource("fxml/Create.fxml"));
-      l.load();
-      CreateController create = l.getController();
+      CreateController create = createCreateController();
       
       String serviceUrl = getValidUrl();
       ODataClient client = getODataClient(serviceUrl);
 
-      create.init(client, holder.name, holder.type);
+      create.initPost(client, holder.name, holder.type);
       create.show();
 
       return create;
@@ -143,6 +143,29 @@ public class BasicController implements Initializable {
     }
   }
 
+  private CreateController createEntityCreate(String entitySetName, EdmEntityType edmEntityType, ODataEntry oDataEntry) {
+    try {
+      CreateController create = createCreateController();
+      
+      String serviceUrl = getValidUrl();
+      ODataClient client = getODataClient(serviceUrl);
+
+      create.initPut(client, entitySetName, edmEntityType, oDataEntry);
+      create.show();
+
+      return create;
+    } catch (Exception ex) {
+      ex.printStackTrace();
+      throw new RuntimeException("Error in preview pane creation", ex);
+    }
+  }
+
+  private CreateController createCreateController() throws IOException {
+      FXMLLoader l = new FXMLLoader(MainApp.class.getResource("fxml/Create.fxml"));
+      l.load();
+      return l.getController();
+  }
+  
   @FXML
   public void sendSingleRequest(ActionEvent event) {
     if (runningRequest == null) {
@@ -384,7 +407,7 @@ public class BasicController implements Initializable {
       }
       ODataFeedItemHolder feed = (ODataFeedItemHolder) entityListView.getSelectionModel().getSelectedItem();
       //      EdmEntityType entityType = edm.getEntityContainer(containerName).getEntitySet(setName).getEntityType();
-      tableView = createTable(feed.feed, feed.type);
+      tableView = createTable(feed);
       edmPane.getItems().add(tableView);
     } catch (EdmException ex) {
       writeToLogArea(ex);
@@ -396,9 +419,9 @@ public class BasicController implements Initializable {
     return forValidation == null || forValidation.length() == 0;
   }
 
-  private TableView createTable(ODataFeed feed, EdmEntityType edmEntityType) throws EdmException {
-    TableView table = new TableView();
-    List<String> propertyNames = edmEntityType.getPropertyNames();
+  private TableView createTable(final ODataFeedItemHolder feedItem) throws EdmException {
+    final TableView table = new TableView();
+    List<String> propertyNames = feedItem.type.getPropertyNames();
 
     for (String propertyName : propertyNames) {
       TableColumn tc = new TableColumn();
@@ -407,9 +430,19 @@ public class BasicController implements Initializable {
       table.getColumns().add(tc);
     }
 
-    ObservableList<ODataEntry> values = FXCollections.observableList(feed.getEntries());
+    ObservableList<ODataEntry> values = FXCollections.observableList(feedItem.feed.getEntries());
     table.setItems(values);
 
+      table.setEditable(true);
+    table.setOnMouseClicked(new EventHandler<MouseEvent>() {
+      @Override
+      public void handle(MouseEvent t) {
+        if(t.getClickCount() > 1) {
+          Object selectedItem = table.getSelectionModel().getSelectedItem();
+          createEntityCreate(feedItem.name, feedItem.type, (ODataEntry) selectedItem);
+        }
+      }
+    });
     return table;
   }
 
