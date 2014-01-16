@@ -106,6 +106,7 @@ public class CreateController implements Initializable {
     for (String name : propertyNames) {
       addProperty(entityType, name);
     }
+    
   }
 
   private void initEntityKeyForUri(EdmEntityType entityType, Map<String, Object> oDataEntries) throws EdmException {
@@ -138,13 +139,23 @@ public class CreateController implements Initializable {
     text.setMinHeight(20);
     text.setPrefHeight(30);
     if(value == null || value.isEmpty()) {
-      text.setPromptText("Enter " + propertyType + " value here.");
+      if(isDateFormat(propertyType)) {
+        text.setPromptText("Enter value here in format " + DATE_FORMAT + ".");
+      } else {
+        text.setPromptText("Enter " + propertyType + " value here.");
+      }
     }
     
     labelBox.getChildren().add(label);
     textBox.getChildren().add(text);
     
     name2Input.put(name, text);
+  }
+  
+  private boolean isDateFormat(String propertyType) {
+    return "DateTimeOffset".equals(propertyType)
+       || "DateTime".equals(propertyType)
+       || "Time".equals(propertyType);
   }
   
   public Node getRoot() {
@@ -252,10 +263,12 @@ public class CreateController implements Initializable {
       return result;
   }
 
-  SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+  private static final String DATE_FORMAT = "yyyy-MM-dd";
+  private static final SimpleDateFormat SDF = new SimpleDateFormat(DATE_FORMAT);
+
   private Date text2Date(String text) {
     try {
-      return sdf.parse(text);
+      return SDF.parse(text);
     } catch (ParseException ex) {
       return new Date();
     }
@@ -271,6 +284,6 @@ public class CreateController implements Initializable {
   }
           
   private String date2Text(Date date) {
-    return sdf.format(date);
+    return SDF.format(date);
   }
 }
