@@ -164,7 +164,9 @@ public class ODataClient {
       EdmEntitySet entitySet = getEntitySet(entitySetName);
       URI rootUri = new URI(entitySetName);
 
-      EntityProviderWriteProperties properties = EntityProviderWriteProperties.serviceRoot(rootUri).build();
+      EntityProviderWriteProperties properties = EntityProviderWriteProperties.serviceRoot(rootUri)
+              .contentOnly(true)
+              .build();
       ODataResponse response = EntityProvider.writeEntry(contentType, entitySet, data, properties);
       Object entity = response.getEntity();
       if (entity instanceof InputStream) {
