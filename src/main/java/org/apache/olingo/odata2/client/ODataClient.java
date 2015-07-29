@@ -12,8 +12,9 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -28,7 +29,6 @@ import org.apache.olingo.odata2.api.edm.EdmEntitySet;
 import org.apache.olingo.odata2.api.edm.EdmEntitySetInfo;
 import org.apache.olingo.odata2.api.edm.EdmException;
 import org.apache.olingo.odata2.api.ep.EntityProvider;
-import org.apache.olingo.odata2.api.ep.EntityProviderException;
 import org.apache.olingo.odata2.api.ep.EntityProviderReadProperties;
 import org.apache.olingo.odata2.api.ep.EntityProviderWriteProperties;
 import org.apache.olingo.odata2.api.ep.feed.ODataFeed;
@@ -43,7 +43,6 @@ public class ODataClient {
   public static final String APPLICATION_ATOM_XML = "application/atom+xml";
   public static final String METADATA = "$metadata";
   //
-  private String serviceUrl;
   private Proxy.Type proxyProtocol;
   private String proxyHostname;
   private int proxyPort;
@@ -54,53 +53,92 @@ public class ODataClient {
   private Edm edm;
 
   private ODataClient() throws IOException, HttpException {
-    this.serviceUrl = "";
     this.useProxy = false;
     this.useAuthentication = false;
   }
 
-  public ODataClient(String serviceUrl) throws IOException, HttpException, ODataException {
-    this.serviceUrl = serviceUrl;
-    this.proxyProtocol = Proxy.Type.HTTP;
-    this.proxyPort = 80;
-    this.useProxy = false;
+//  public ODataClient(String serviceUrl) throws IOException, HttpException, ODataException {
+//    this.serviceUrl = serviceUrl;
+//    this.proxyProtocol = Proxy.Type.HTTP;
+//    this.proxyPort = 80;
+//    this.useProxy = false;
+//
+//    edm = getEdmInternal();
+//  }
 
-    edm = getEdmInternal();
+//  public ODataClient(String serviceUrl, Proxy.Type protocol, String proxy, int port) throws IOException, ODataException, HttpException {
+//    this.serviceUrl = serviceUrl;
+//    this.proxyProtocol = protocol;
+//    this.proxyHostname = proxy;
+//    this.proxyPort = port;
+//    this.useProxy = true;
+//    this.useAuthentication = false;
+//
+//    edm = getEdmInternal();
+//  }
+
+//  public ODataClient(String serviceUrl, Proxy.Type protocol, String proxy, int port, String username, String password)
+//          throws IOException, ODataException, HttpException {
+//    this.serviceUrl = serviceUrl;
+//    this.proxyProtocol = protocol;
+//    this.proxyHostname = proxy;
+//    this.proxyPort = port;
+//    this.useProxy = true;
+//    this.username = username;
+//    this.password = password;
+//    this.useAuthentication = true;
+//
+//    edm = getEdmInternal();
+//  }
+
+//  public ODataClient(String serviceUrl, String username, String password) throws IOException, ODataException, HttpException {
+//    this.useProxy = false;
+//    this.username = username;
+//    this.password = password;
+//    this.useAuthentication = true;
+//
+//    edm = getEdmInternal();
+//  }
+
+  public static class ODataClientBuilder {
+    private Map<String, List<String>> headers = new LinkedHashMap<>();
+    private String httpMethod;
+    private String url;
+    private InputStream body;
+
+    public ODataClientBuilder(String method, String url) {
+      this.httpMethod = method;
+      this.url = url;
+    }
+
+    public ODataClientBuilder addHeader(String name, String value) {
+      List<String> values = headers.get(name);
+      if(values == null) {
+        values = new LinkedList<>();
+        headers.put(name, values);
+      }
+      values.add(value);
+      return this;
+    }
+
+    public ODataClientBuilder setBody(InputStream body) {
+      this.body = body;
+      return this;
+    }
+
+    public InputStream execute() throws IOException, HttpException {
+      ODataClient client = new ODataClient();
+      return (InputStream) client.connect(url, getContentType(), "GET").getContent();
+    }
+
+    private String getContentType() {
+      // TODO: change
+      return APPLICATION_JSON;
+    }
   }
 
-  public ODataClient(String serviceUrl, Proxy.Type protocol, String proxy, int port) throws IOException, ODataException, HttpException {
-    this.serviceUrl = serviceUrl;
-    this.proxyProtocol = protocol;
-    this.proxyHostname = proxy;
-    this.proxyPort = port;
-    this.useProxy = true;
-    this.useAuthentication = false;
-
-    edm = getEdmInternal();
-  }
-
-  public ODataClient(String serviceUrl, Proxy.Type protocol, String proxy, int port, String username, String password)
-          throws IOException, ODataException, HttpException {
-    this.serviceUrl = serviceUrl;
-    this.proxyProtocol = protocol;
-    this.proxyHostname = proxy;
-    this.proxyPort = port;
-    this.useProxy = true;
-    this.username = username;
-    this.password = password;
-    this.useAuthentication = true;
-
-    edm = getEdmInternal();
-  }
-
-  public ODataClient(String serviceUrl, String username, String password) throws IOException, ODataException, HttpException {
-    this.serviceUrl = serviceUrl;
-    this.useProxy = false;
-    this.username = username;
-    this.password = password;
-    this.useAuthentication = true;
-
-    edm = getEdmInternal();
+  public static ODataClientBuilder get(String url) {
+    return new ODataClientBuilder("GET", url);
   }
 
   private Edm getEdmInternal() throws IOException, ODataException, HttpException {
@@ -217,18 +255,20 @@ public class ODataClient {
     return connection;
   }
 
-  private HttpURLConnection initializeConnection(String relativeUri, String contentType, String httpMethod) throws MalformedURLException, IOException {
-    URL url = new URL(serviceUrl + relativeUri);
+  private HttpURLConnection initializeConnection(String url, String contentType, String httpMethod) throws MalformedURLException, IOException {
+    URL requestUrl = new URL(url);
     HttpURLConnection connection;
     if (useProxy) {
       Proxy proxy = new Proxy(proxyProtocol, new InetSocketAddress(proxyHostname, proxyPort));
-      connection = (HttpURLConnection) url.openConnection(proxy);
+      connection = (HttpURLConnection) requestUrl.openConnection(proxy);
     } else {
-      connection = (HttpURLConnection) url.openConnection();
+      connection = (HttpURLConnection) requestUrl.openConnection();
     }
+    // TODO: do better
     connection.setRequestMethod(httpMethod);
     connection.setRequestProperty("Accept", contentType);
     connection.setRequestProperty(HttpHeaders.CONTENT_TYPE, contentType);
+    //
 
     if (useAuthentication) {
       String authorization = "Basic ";
