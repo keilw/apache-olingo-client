@@ -1,13 +1,14 @@
 package org.apache.olingo.odata2.client.fxml;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.net.URL;
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.ResourceBundle;
 
 import javafx.application.Platform;
@@ -22,7 +23,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.ProgressIndicator;
-import javafx.scene.control.TableView;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.web.WebView;
@@ -37,7 +38,8 @@ import org.apache.olingo.odata2.client.StringHelper;
 public class BasicController implements Initializable {
 
   @FXML ComboBox<String> uriSelector;
-  @FXML TextArea rawView;
+  @FXML TextArea rawResponseBody;
+  @FXML TextArea rawResponseHeaders;
   @FXML WebView webView;
   @FXML TextArea logArea;
   @FXML TextArea requestHeaders;
@@ -50,6 +52,7 @@ public class BasicController implements Initializable {
   @FXML TextField loginUser;
   @FXML PasswordField loginPassword;
   @FXML Button singleRequestButton;
+  @FXML TabPane tabPane;
 
   private Task<Void> runningRequest = null;
 
@@ -96,16 +99,20 @@ public class BasicController implements Initializable {
         protected Void call() throws Exception {
           try {
             ODataClient.ODataClientBuilder clientBuilder = getClientBuilder();
-            InputStream is = clientBuilder.execute();
-            final String content = StringHelper.inputStreamToString(is);
+            ODataClient.ClientResponse response = clientBuilder.execute();
+            final String content = StringHelper.inputStreamToString(response.getBody());
+            final String headerContent = convertHeaders(response.getHeaders());
 
             Platform.runLater(new Runnable() {
               @Override
               public void run() {
-                rawView.setText(content);
+                rawResponseBody.setText(content);
+                rawResponseHeaders.setText(headerContent);
                 webView.getEngine().loadContent(content);
                 finishRunningRequest();
                 singleRequestButton.setText("Single Request");
+                // TODO: remove hard coded 2 
+                tabPane.getSelectionModel().select(2);
               }
             });
 
@@ -133,6 +140,17 @@ public class BasicController implements Initializable {
 
   }
 
+  private String convertHeaders(Map<String, List<String>> headers) {
+    StringBuilder content = new StringBuilder();
+    for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+      List<String> value = entry.getValue();
+      content.append("HI[").append(value.size()).append("] -> {")
+          .append(entry.getKey())
+          .append(": ").append(value).append("}\n");
+    }
+    return content.toString();
+  }
+
   private void cancelRunningRequest() {
     if (runningRequest != null) {
       runningRequest.cancel();
@@ -144,7 +162,7 @@ public class BasicController implements Initializable {
   }
 
   private void finishRunningRequest() {
-    writeToLogArea("All requests successfull processed");
+    writeToLogArea("All requests successfully processed");
     progress.setProgress(1);
     runningRequest = null;
     enableRequestButtons();
@@ -164,7 +182,7 @@ public class BasicController implements Initializable {
   private void clearViews() {
     logArea.setText("");
     webView.getEngine().loadContent("");
-    rawView.setText("");
+    rawResponseBody.setText("");
     progress.setProgress(-1);
   }
 
@@ -173,7 +191,7 @@ public class BasicController implements Initializable {
     Writer out = new StringWriter();
     PrintWriter pw = new PrintWriter(out, true);
     ex.printStackTrace(pw);
-    b.append("Exception occured: ").append(ex.getMessage()).append("\n").append(out.toString());
+    b.append("Exception occurred: ").append(ex.getMessage()).append("\n").append(out.toString());
     writeToLogArea(b.toString());
   }
 

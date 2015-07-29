@@ -126,14 +126,30 @@ public class ODataClient {
       return this;
     }
 
-    public InputStream execute() throws IOException, HttpException {
+    public ClientResponse execute() throws IOException, HttpException {
       ODataClient client = new ODataClient();
-      return (InputStream) client.connect(url, getContentType(), "GET").getContent();
+      return new ClientResponse(client.connect(url, getContentType(), httpMethod));
     }
 
     private String getContentType() {
       // TODO: change
       return APPLICATION_JSON;
+    }
+  }
+
+  public static class ClientResponse {
+    private final HttpURLConnection urlConnection;
+
+    public ClientResponse(HttpURLConnection connection) {
+      this.urlConnection = connection;
+    }
+
+    public InputStream getBody() throws IOException {
+      return urlConnection.getInputStream();
+    }
+
+    public Map<String, List<String>> getHeaders() {
+      return urlConnection.getHeaderFields();
     }
   }
 
