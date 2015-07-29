@@ -157,6 +157,10 @@ public class ODataClient {
     return new ODataClientBuilder("GET", url);
   }
 
+  public static ODataClientBuilder create(String httpMethod, String url) {
+    return new ODataClientBuilder(httpMethod, url);
+  }
+
   private Edm getEdmInternal() throws IOException, ODataException, HttpException {
     if (edm == null) {
       HttpURLConnection connection = connect(METADATA, APPLICATION_XML, "GET");

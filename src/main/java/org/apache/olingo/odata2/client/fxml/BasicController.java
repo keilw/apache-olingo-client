@@ -1,10 +1,12 @@
 package org.apache.olingo.odata2.client.fxml;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.List;
@@ -37,6 +39,15 @@ import org.apache.olingo.odata2.client.StringHelper;
  */
 public class BasicController implements Initializable {
 
+  private static final String LB_CRLF = "CRLF";
+  private static final String LB_CR = "CR";
+  private static final String LB_LF = "LF";
+
+  private enum HttpMethod {GET, PUT, POST, DELETE};
+
+  private static final String CS_UTF_8 = "UTF-8";
+  private static final String CS_ISO_8859_1 = "ISO-8859-1";
+
   @FXML ComboBox<String> uriSelector;
   @FXML TextArea rawResponseBody;
   @FXML TextArea rawResponseHeaders;
@@ -53,6 +64,9 @@ public class BasicController implements Initializable {
   @FXML PasswordField loginPassword;
   @FXML Button singleRequestButton;
   @FXML TabPane tabPane;
+  @FXML ComboBox<HttpMethod> httpMethodCombo;
+  @FXML ComboBox<String> lineBreakCombo;
+  @FXML ComboBox<String> charsetCombo;
 
   private Task<Void> runningRequest = null;
 
@@ -66,6 +80,35 @@ public class BasicController implements Initializable {
 
     uriSelector.setItems(items);
     uriSelector.getSelectionModel().selectLast();
+    //
+    ObservableList<String> lineBreakOptions = FXCollections.observableArrayList();
+    lineBreakOptions.add(LB_CRLF);
+    lineBreakOptions.add(LB_CR);
+    lineBreakOptions.add(LB_LF);
+    lineBreakCombo.setItems(lineBreakOptions);
+    lineBreakCombo.getSelectionModel().selectFirst();
+
+    //
+//    ObservableList<String> httpMethods = FXCollections.observableArrayList();
+//    httpMethods.add(HTTP_METHOD_GET);
+//    httpMethods.add(HTTP_METHOD_POST);
+//    httpMethods.add(HTTP_METHOD_PUT);
+//    httpMethods.add(HTTP_METHOD_DELETE);
+    ObservableList<HttpMethod> httpMethods = FXCollections.observableArrayList();
+    httpMethods.add(HttpMethod.GET);
+    httpMethods.add(HttpMethod.POST);
+    httpMethods.add(HttpMethod.PUT);
+    httpMethods.add(HttpMethod.DELETE);
+
+    httpMethodCombo.setItems(httpMethods);
+    httpMethodCombo.getSelectionModel().selectFirst();
+
+    ObservableList<String> charsets = FXCollections.observableArrayList();
+    charsets.add(CS_UTF_8);
+    charsets.add(CS_ISO_8859_1);
+
+    charsetCombo.setItems(charsets);
+    charsetCombo.getSelectionModel().selectFirst();
   }
 
   @FXML
@@ -100,6 +143,7 @@ public class BasicController implements Initializable {
           try {
             ODataClient.ODataClientBuilder clientBuilder = getClientBuilder();
             ODataClient.ClientResponse response = clientBuilder.execute();
+
             final String content = StringHelper.inputStreamToString(response.getBody());
             final String headerContent = convertHeaders(response.getHeaders());
 
@@ -111,7 +155,7 @@ public class BasicController implements Initializable {
                 webView.getEngine().loadContent(content);
                 finishRunningRequest();
                 singleRequestButton.setText("Single Request");
-                // TODO: remove hard coded 2 
+                // TODO: remove hard coded 2
                 tabPane.getSelectionModel().select(2);
               }
             });
@@ -222,7 +266,10 @@ public class BasicController implements Initializable {
   }
 
   public ODataClient.ODataClientBuilder getClientBuilder() {
-    ODataClient.ODataClientBuilder builder = ODataClient.get(getValidUrl());
+    HttpMethod httpMethod = httpMethodCombo.getSelectionModel().getSelectedItem();
+    ODataClient.ODataClientBuilder builder = ODataClient.create(httpMethod.name(), getValidUrl());
+
+    //headers
     String requestHeadersText = requestHeaders.getText();
     String[] reqHeaderLines = requestHeadersText.split("\r\n|\n|\r");
     for (String headerLine : reqHeaderLines) {
@@ -231,10 +278,30 @@ public class BasicController implements Initializable {
         builder.addHeader(nameAndValue[0], nameAndValue[1]);
       }
     }
+
+    //
+    if(HttpMethod.POST == httpMethod || HttpMethod.PUT == httpMethod) {
+      String body = requestBody.getText();
+      body = body.replaceAll("\n", getLineBreak());
+      // TODO: replace hard coded utf-8
+      String charset = charsetCombo.getSelectionModel().getSelectedItem();
+      builder.setBody(new ByteArrayInputStream(body.getBytes(Charset.forName(charset))));
+    }
+
     return builder;
   }
 
   private boolean isEmpty(String forValidation) {
     return forValidation == null || forValidation.length() == 0;
+  }
+
+  public String getLineBreak() {
+    String lb = lineBreakCombo.getSelectionModel().getSelectedItem();
+    switch (lb) {
+    case LB_CRLF: return "\r\n";
+    case LB_LF: return "\n";
+    case LB_CR: return "\r";
+    }
+    return "\r\n";
   }
 }
