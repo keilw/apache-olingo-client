@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.mirb.util.io.StringHelper;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.olingo.odata2.api.commons.HttpHeaders;
 import org.apache.olingo.odata2.api.commons.HttpStatusCodes;
@@ -127,9 +128,28 @@ public class ODataClient {
     }
 
     public ClientResponse execute() throws IOException, HttpException {
-      ODataClient client = new ODataClient();
-      return new ClientResponse(client.connect(url, getContentType(), httpMethod));
+      if("GET".equals(httpMethod)) {
+        return executeGet();
+      } else if("POST".equals(httpMethod)) {
+        return executePost();
+      } else {
+        throw new UnsupportedOperationException("HttpMethod '" + httpMethod + "' is not supported yet.");
+      }
     }
+
+    public ClientResponse executeGet() throws IOException, HttpException {
+      ODataClient client = new ODataClient();
+      return new ClientResponse(client.getRequest(url, getContentType(), httpMethod));
+    }
+
+    public ClientResponse executePost() throws IOException, HttpException {
+      ODataClient client = new ODataClient();
+      if(body == null) {
+        throw new IllegalArgumentException("Body must not be nulll for post request.");
+      }
+      return new ClientResponse(client.postRequest(url, body, getContentType(), httpMethod));
+    }
+
 
     private String getContentType() {
       // TODO: change
@@ -163,7 +183,7 @@ public class ODataClient {
 
   private Edm getEdmInternal() throws IOException, ODataException, HttpException {
     if (edm == null) {
-      HttpURLConnection connection = connect(METADATA, APPLICATION_XML, "GET");
+      HttpURLConnection connection = getRequest(METADATA, APPLICATION_XML, "GET");
       edm = EntityProvider.readMetadata((InputStream) connection.getContent(), false);
     }
     return edm;
@@ -193,11 +213,11 @@ public class ODataClient {
       relativeUri = entityContainerName + "." + entitySetName;
     }
 
-    InputStream content = (InputStream) connect(relativeUri, contentType, "GET").getContent();
+    InputStream content = (InputStream) getRequest(relativeUri, contentType, "GET").getContent();
     content = storeRawContent(content);
     return EntityProvider.
             readFeed(contentType, entityContainer.getEntitySet(entitySetName), content, EntityProviderReadProperties.
-                    init().build());
+                init().build());
   }
 
   public void putEntity(String entitySetName, String uriId, Map<String, Object> data) {
@@ -262,14 +282,31 @@ public class ODataClient {
 
   public static InputStream getRawHttpEntity(String relativeUri, String contentType) throws HttpException, IOException {
     ODataClient client = new ODataClient();
-    return (InputStream) client.connect(relativeUri, contentType, "GET").getContent();
+    return (InputStream) client.getRequest(relativeUri, contentType, "GET").getContent();
   }
 
-  private HttpURLConnection connect(String relativeUri, String contentType, String httpMethod) throws IOException, HttpException {
+  private HttpURLConnection getRequest(String relativeUri, String contentType, String httpMethod) throws IOException, HttpException {
     HttpURLConnection connection = initializeConnection(relativeUri, contentType, httpMethod);
 
     connection.connect();
 
+    checkStatus(connection);
+
+    return connection;
+  }
+
+  private HttpURLConnection postRequest(String relativeUri, InputStream is, String contentType, String httpMethod)
+      throws IOException, HttpException {
+    HttpURLConnection connection = initializeConnection(relativeUri, contentType, httpMethod);
+    byte[] buffer = new byte[2048];
+    int size = is.read(buffer);
+
+    connection.setDoOutput(true);
+    //
+    Logger.getLogger(ODataClient.class.getName()).log(Level.INFO, "\n" + new String(buffer, 0, size) + "\n");
+    //
+    connection.getOutputStream().write(buffer, 0, size);
+    connection.connect();
     checkStatus(connection);
 
     return connection;
@@ -307,7 +344,7 @@ public class ODataClient {
 
   private InputStream storeRawContent(InputStream content) {
     try {
-      String rawContent = StringHelper.inputStreamToString(content);
+      String rawContent = StringHelper.asString(content);
       rawContentOfLastRequest = rawContent;
       return new ByteArrayInputStream(rawContent.getBytes("UTF-8"));
     } catch (IOException ex) {
