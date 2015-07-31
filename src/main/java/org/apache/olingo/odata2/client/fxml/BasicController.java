@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 
+import de.mirb.util.io.StringHelper;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -32,7 +33,6 @@ import javafx.scene.web.WebView;
 
 import org.apache.olingo.odata2.client.HttpException;
 import org.apache.olingo.odata2.client.ODataClient;
-import org.apache.olingo.odata2.client.StringHelper;
 
 /**
  *
@@ -144,7 +144,7 @@ public class BasicController implements Initializable {
             ODataClient.ODataClientBuilder clientBuilder = getClientBuilder();
             ODataClient.ClientResponse response = clientBuilder.execute();
 
-            final String content = StringHelper.inputStreamToString(response.getBody());
+            final String content = StringHelper.asString(response.getBody());
             final String headerContent = convertHeaders(response.getHeaders());
 
             Platform.runLater(new Runnable() {
