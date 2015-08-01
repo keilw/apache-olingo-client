@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.ResourceBundle;
 
 import de.mirb.util.io.StringHelper;
+import de.mirb.util.web.HttpClient;
+import de.mirb.util.web.HttpException;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -31,9 +33,6 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.web.WebView;
 
-import org.apache.olingo.odata2.client.HttpException;
-import org.apache.olingo.odata2.client.ODataClient;
-
 /**
  *
  */
@@ -43,7 +42,7 @@ public class BasicController implements Initializable {
   private static final String LB_CR = "CR";
   private static final String LB_LF = "LF";
 
-  private enum HttpMethod {GET, PUT, POST, DELETE};
+  private enum HttpMethod {GET, PUT, POST, DELETE}
 
   private static final String CS_UTF_8 = "UTF-8";
   private static final String CS_ISO_8859_1 = "ISO-8859-1";
@@ -141,8 +140,8 @@ public class BasicController implements Initializable {
         @Override
         protected Void call() throws Exception {
           try {
-            ODataClient.ODataClientBuilder clientBuilder = getClientBuilder();
-            ODataClient.ClientResponse response = clientBuilder.execute();
+            HttpClient.HttpClientBuilder clientBuilder = getClientBuilder();
+            HttpClient.ClientResponse response = clientBuilder.execute();
 
             final String content = StringHelper.asString(response.getBody());
             final String headerContent = convertHeaders(response.getHeaders());
@@ -265,9 +264,9 @@ public class BasicController implements Initializable {
     return serviceUrl;
   }
 
-  public ODataClient.ODataClientBuilder getClientBuilder() {
+  public HttpClient.HttpClientBuilder getClientBuilder() {
     HttpMethod httpMethod = httpMethodCombo.getSelectionModel().getSelectedItem();
-    ODataClient.ODataClientBuilder builder = ODataClient.create(httpMethod.name(), getValidUrl());
+    HttpClient.HttpClientBuilder builder = HttpClient.with(httpMethod.name(), getValidUrl());
 
     //headers
     String requestHeadersText = requestHeaders.getText();
