@@ -5,8 +5,14 @@
   -fx-background-color: whitesmoke;
 }
 
-#output {
-  -fx-font-size: 16pt;
+.TextHeader {
+  -fx-font-size: 14pt;
+  -fx-background-color: beige;
+  -fx-font-family: monospace;
+}
+
+.TextBody {
+  -fx-font-size: 12pt;
   -fx-background-color: beige;
   -fx-font-family: monospace;
 }
