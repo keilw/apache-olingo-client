@@ -11,11 +11,14 @@
   <version>0.4.0-SNAPSHOT</version>
 
   <properties>
-    <slf4j.version>1.6.1</slf4j.version>
-    <version.olingo>2.0.2</version.olingo>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.java.version>1.8</project.java.version>
     <timestamp>${maven.build.timestamp}</timestamp>
     <maven.build.timestamp.format>yyMMddHHmm</maven.build.timestamp.format>
+    <!-- Dependency versions -->
+    <version.slf4j>1.7.1</version.slf4j>
+    <version.miutils>0.1.0-SNAPSHOT</version.miutils>
+    <version.javafx>2.2</version.javafx>
   </properties>
 
   <build>
@@ -61,8 +64,8 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>2.3.2</version>
         <configuration>
-          <source>1.7</source>
-          <target>1.7</target>
+          <source>${project.java.version}</source>
+          <target>${project.java.version}</target>
         </configuration>
       </plugin>
     </plugins>
@@ -71,31 +74,21 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.apache.olingo</groupId>
-      <artifactId>olingo-odata2-api</artifactId>
-      <version>${version.olingo}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.olingo</groupId>
-      <artifactId>olingo-odata2-core</artifactId>
-      <version>${version.olingo}</version>
-    </dependency>
-    <dependency>
       <groupId>com.oracle</groupId>
       <artifactId>javafx</artifactId>
-      <version>2.2</version>
+      <version>${version.javafx}</version>
       <systemPath>${java.home}/lib/ext/jfxrt.jar</systemPath>
       <scope>system</scope>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
-      <version>1.7.1</version>
+      <version>${version.slf4j}</version>
     </dependency>
     <dependency>
       <groupId>de.mirb.utils</groupId>
       <artifactId>miutils</artifactId>
-      <version>0.1.0-SNAPSHOT</version>
+      <version>${version.miutils}</version>
     </dependency>
   </dependencies>
 </project>
