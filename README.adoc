@@ -1,0 +1,3 @@
+= Apache Olingo Client
+
+Sample client (JavaFX) for Apache Olingo
