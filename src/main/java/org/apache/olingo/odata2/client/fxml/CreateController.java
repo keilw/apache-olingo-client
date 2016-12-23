@@ -41,8 +41,6 @@ import org.apache.olingo.odata2.client.ODataClient;
 
 /**
  * FXML Controller class
- *
- * @author d046871
  */
 public class CreateController implements Initializable {
 

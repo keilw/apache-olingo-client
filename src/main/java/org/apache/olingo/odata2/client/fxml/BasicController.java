@@ -91,9 +91,8 @@ public class BasicController implements Initializable {
   public void initialize(URL url, ResourceBundle rb) {
     ObservableList<String> items = FXCollections.observableArrayList();
     items.add("http://www.olingo.org");
-    items.add("http://localhost:8080/com.sap.core.odata.performance-web/ReferenceScenario.svc/");
-    items.add("http://services.odata.org/Northwind/Northwind.svc/");
     items.add("http://localhost:8080/MyFormula.svc/");
+    items.add("http://services.odata.org/Northwind/Northwind.svc/");
 
     uriSelector.setItems(items);
     uriSelector.getSelectionModel().selectLast();
@@ -519,7 +518,7 @@ public class BasicController implements Initializable {
     table.setItems(values);
 
       table.setEditable(true);
-    table.setOnMouseClicked(new EventHandler<MouseEvent>() {
+      table.setOnMouseClicked(new EventHandler<MouseEvent>() {
       @Override
       public void handle(MouseEvent t) {
         if(t.getClickCount() > 1) {
