@@ -12,4 +12,4 @@ OUT_FILE=olingo-client-app
 
 echo "Create from root dir '$ROOT_DIR' into '$OUT_DIR' with name '$OUT_FILE'"
 
-${JAVA_HOME}/bin/javafxpackager -createjar -nocss2bin -appclass $APP_CLASS -srcdir $SRC_DIR -outdir $OUT_DIR -outfile $OUT_FILE Javafxpackager
+${JAVA_HOME}/bin/javapackager -createjar -nocss2bin -appclass $APP_CLASS -srcdir $SRC_DIR -outdir $OUT_DIR -outfile $OUT_FILE
