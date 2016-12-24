@@ -39,7 +39,11 @@ public class MainApp extends Application {
     Scene scene = new Scene(root);
 
     String buildVersion = properties.getProperty("build.version");
-    stage.setTitle("Olingo Sample Client - OData-v2 - " + buildVersion);
+    String title = "Olingo Sample Client - OData-v2 - " + buildVersion;
+    if(!buildVersion.contains("SNAPSHOT")) {
+      title = title.substring(0, title.lastIndexOf("-"));
+    }
+    stage.setTitle(title);
     stage.setScene(scene);
     stage.show();
   }
