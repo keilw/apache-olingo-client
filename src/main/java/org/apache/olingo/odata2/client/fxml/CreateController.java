@@ -232,33 +232,24 @@ public class CreateController implements Initializable {
   }
 
   private Object text2Value(EdmProperty property, String text) throws EdmException {
-      
-      final Object result;
-      if(text != null && text.isEmpty()) {
-        result = null;
-      } else {
+      if(text != null && !text.isEmpty()) {
         EdmType propertyType = property.getType();
-        if(property.isSimple()) {
+        if (property.isSimple()) {
           String propertyTypeName = propertyType.getName();
-          if("String".equals(propertyTypeName)) {
-            result = text;
-          } else if("DateTime".equals(propertyTypeName)) {
-            result = text2Date(text);
-          } else if("Int32".equals(propertyTypeName)) {
-            result = Integer.valueOf(text);
-          } else if("Int64".equals(propertyTypeName)) {
-            result = Long.valueOf(text);
-          } else if("Double".equals(propertyTypeName)) {
-            result = Double.valueOf(text);
-          } else {
-            result = null;
+          if ("String".equals(propertyTypeName)) {
+            return text;
+          } else if ("DateTime".equals(propertyTypeName)) {
+            return text2Date(text);
+          } else if ("Int32".equals(propertyTypeName)) {
+            return Integer.valueOf(text);
+          } else if ("Int64".equals(propertyTypeName)) {
+            return Long.valueOf(text);
+          } else if ("Double".equals(propertyTypeName)) {
+            return Double.valueOf(text);
           }
-        } else {
-          result = null;
         }
       }
-      
-      return result;
+      return null;
   }
 
   private static final String DATE_FORMAT = "yyyy-MM-dd";

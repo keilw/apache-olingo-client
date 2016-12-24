@@ -1,3 +1,42 @@
 = Apache Olingo Client
 
+
+== Disclaimer
+Current source code and version is published without license. +
+If you (somebody) want to use this in his project please contact me.
+Afterwards I will grant the use of this code without warranty.
+When I find some time to inform myself about the different possible licenses at link:http://choosealicense.com[choosealicense.com]
+I will probably change to a suitable license.
+
+== General information
 Sample client (JavaFX) for Apache Olingo
+
+
+== Technical information
+  * The release versions are based on link:http://semver.org[Semantic Versioning 2.0.0].
+  * The latest release require `Java 8` (or newer) and is build with link:https://maven.apache.org[Maven] (version `3.3.x`).
+
+
+== Current Features _(for this branch)_
+
+  * Run basic OData JavaFX client...
+  ** ...to query a OData V2 service
+  ** ...to do raw HTTP GET request to a service
+
+== New and Noteworthy
+
+  * *nothing*
+
+== Roadmap
+
+  * *none*
+
+== How to use
+
+First build with maven, package with `javapackager` and then start with `java -jar`:
+
+```
+mvn clean install
+./scripts/javafx_package_gen.sh
+java -jar ./target/olingo-client-app.jar
+```

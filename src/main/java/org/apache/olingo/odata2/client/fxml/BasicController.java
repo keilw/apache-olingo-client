@@ -1,20 +1,5 @@
 package org.apache.olingo.odata2.client.fxml;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.io.Writer;
-import java.net.Proxy;
-import java.net.URL;
-import java.text.DateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.ResourceBundle;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
@@ -23,23 +8,10 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
-import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
-import javafx.scene.control.ListView;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.ProgressIndicator;
-import javafx.scene.control.SplitPane;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
@@ -58,6 +30,14 @@ import org.apache.olingo.odata2.client.HttpException;
 import org.apache.olingo.odata2.client.MainApp;
 import org.apache.olingo.odata2.client.ODataClient;
 import org.apache.olingo.odata2.client.StringHelper;
+
+import java.io.*;
+import java.net.Proxy;
+import java.net.URL;
+import java.text.DateFormat;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -79,7 +59,7 @@ public class BasicController implements Initializable {
   @FXML PasswordField loginPassword;
   @FXML Button singleRequestButton;
   @FXML Button exploreServiceButton;
-  @FXML AnchorPane createPane;
+//  @FXML AnchorPane createPane;
 
   //
   private CreateController createController;
@@ -186,23 +166,17 @@ public class BasicController implements Initializable {
             InputStream is = ODataClient.getRawHttpEntity(serviceUrl, ODataClient.APPLICATION_JSON);
             final String content = StringHelper.inputStreamToString(is);
 
-            Platform.runLater(new Runnable() {
-              @Override
-              public void run() {
-                rawView.setText(content);
-                webView.getEngine().loadContent(content);
-                finishRunningRequest();
-                singleRequestButton.setText("Single Request");
-              }
+            Platform.runLater(() -> {
+              rawView.setText(content);
+              webView.getEngine().loadContent(content);
+              finishRunningRequest();
+              singleRequestButton.setText("Single Request");
             });
 
           } catch (IllegalArgumentException | IOException | HttpException ex) {
-            Platform.runLater(new Runnable() {
-              @Override
-              public void run() {
-                failRunningRequest(ex);
-                singleRequestButton.setText("Single Request");
-              }
+            Platform.runLater(() -> {
+              failRunningRequest(ex);
+              singleRequestButton.setText("Single Request");
             });
           }
           return null;
@@ -232,24 +206,18 @@ public class BasicController implements Initializable {
             final ODataClient client = getODataClient(serviceUrl);
             createEdmView(client);
 
-            Platform.runLater(new Runnable() {
-              @Override
-              public void run() {
-                String rawContent = client.getRawContentOfLastRequest();
-                webView.getEngine().loadContent(rawContent);
-                rawView.setText(rawContent);
-                exploreServiceButton.setText("Explore Service");
-                finishRunningRequest();
-              }
+            Platform.runLater(() -> {
+              String rawContent = client.getRawContentOfLastRequest();
+              webView.getEngine().loadContent(rawContent);
+              rawView.setText(rawContent);
+              exploreServiceButton.setText("Explore Service");
+              finishRunningRequest();
             });
 
           } catch (ODataException | IllegalArgumentException | IOException | HttpException ex) {
-            Platform.runLater(new Runnable() {
-              @Override
-              public void run() {
-                exploreServiceButton.setText("Explore Service");
-                failRunningRequest(ex);
-              }
+            Platform.runLater(() -> {
+              exploreServiceButton.setText("Explore Service");
+              failRunningRequest(ex);
             });
           }
           return null;
@@ -278,7 +246,7 @@ public class BasicController implements Initializable {
   }
 
   private void finishRunningRequest() {
-    writeToLogArea("All requests successfull processed");
+    writeToLogArea("All requests successful processed");
     progress.setProgress(1);
     runningRequest = null;
     enableRequestButtons();
@@ -342,15 +310,10 @@ public class BasicController implements Initializable {
     logArea.setText(b.toString());
   }
 
-  private void createEdmView(ODataClient client) throws ODataException, EdmException, IOException, HttpException {
+  private void createEdmView(ODataClient client) throws ODataException, IOException, HttpException {
     entityListView.getItems().clear();
 //    entityListView.setEditable(true);
-    entityListView.setCellFactory(new Callback<ListView<String>, ListCell<ODataFeedItemHolder>>() {
-      @Override
-      public ListCell<ODataFeedItemHolder> call(ListView<String> param) {
-        return new ODataFeedCell();
-      }
-    });
+    entityListView.setCellFactory(param -> new ODataFeedCell());
     
     List<EdmEntitySetInfo> entitySets = client.getEntitySets();
     final double countStep = 1d / entitySets.size();
@@ -365,18 +328,15 @@ public class BasicController implements Initializable {
       EdmEntityType entityType = edm.getEntityContainer(containerName).getEntitySet(setName).getEntityType();
 
       final ODataFeedItemHolder holder = new ODataFeedItemHolder(feed, entityType, setName);
-      Runnable run = new Runnable() {
-        @Override
-        public void run() {
-          if (runningRequest == null) {
-            return;
-          }
-          entityListView.getItems().add(holder);
-          if (progress.getProgress() < 0) {
-            progress.setProgress(0);
-          }
-          progress.setProgress(progress.getProgress() + countStep);
+      Runnable run = () -> {
+        if (runningRequest == null) {
+          return;
         }
+        entityListView.getItems().add(holder);
+        if (progress.getProgress() < 0) {
+          progress.setProgress(0);
+        }
+        progress.setProgress(progress.getProgress() + countStep);
       };
       Platform.runLater(run);
     }
@@ -395,19 +355,9 @@ public class BasicController implements Initializable {
       hbox.getChildren().addAll(label, pane, refreshButton, createButton);
       HBox.setHgrow(pane, Priority.ALWAYS);
       
-      refreshButton.setOnAction(new EventHandler<ActionEvent>() {
-        @Override
-        public void handle(ActionEvent event) {
-          refreshODataFeed(lastItem);
-        }
-      });
+      refreshButton.setOnAction(event -> refreshODataFeed(lastItem));
 
-      createButton.setOnAction(new EventHandler<ActionEvent>() {
-        @Override
-        public void handle(ActionEvent event) {
-          createEntityCreateDialog(lastItem);
-        }
-      });
+      createButton.setOnAction(event -> createEntityCreateDialog(lastItem));
     }
 
     @Override
@@ -517,15 +467,12 @@ public class BasicController implements Initializable {
     ObservableList<ODataEntry> values = FXCollections.observableList(feedItem.feed.getEntries());
     table.setItems(values);
 
-      table.setEditable(true);
-      table.setOnMouseClicked(new EventHandler<MouseEvent>() {
-      @Override
-      public void handle(MouseEvent t) {
-        if(t.getClickCount() > 1) {
+    table.setEditable(true);
+    table.setOnMouseClicked((MouseEvent t) -> {
+        if (t.getClickCount() > 1) {
           Object selectedItem = table.getSelectionModel().getSelectedItem();
           createEntityUpdateDialog(feedItem.name, feedItem.type, (ODataEntry) selectedItem);
         }
-      }
     });
     return table;
   }
